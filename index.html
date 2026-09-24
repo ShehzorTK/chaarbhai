@@ -75,7 +75,7 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
   --line:rgba(239,234,223,.12);
   --gline:rgba(206,192,163,.34);
   --line-2:rgba(239,234,223,.22);
-  --soft:rgba(239,234,223,.5);        /* smallest ivory that still reads (4.5:1 on ink) */
+  --soft:rgba(239,234,223,.54);       /* smallest ivory that still reads (4.5:1 on ink, ink-2 and ink-3) */
   --gold-hi:#E6D9B8;
   --gold-wash:rgba(206,192,163,.1);
   --hdr:rgba(18,20,28,.86);
@@ -114,14 +114,14 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
   --paper:#1D1F2C;
   --dim:rgba(29,31,44,.74);
   --faint:rgba(29,31,44,.36);
-  --soft:rgba(29,31,44,.64);
-  --gold:#7A6743;
+  --soft:rgba(29,31,44,.68);
+  --gold:#6E5C3B;
   --gold-2:#A8966E;
   --gold-hi:#57492D;
   --line:rgba(29,31,44,.13);
-  --gline:rgba(122,103,67,.42);
+  --gline:rgba(110,92,59,.42);
   --line-2:rgba(29,31,44,.24);
-  --gold-wash:rgba(122,103,67,.1);
+  --gold-wash:rgba(110,92,59,.1);
   --hdr:rgba(244,240,231,.9);
   --bar:rgba(244,240,231,.94);
   color-scheme:light;
@@ -131,7 +131,7 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
    footer and the loading screen, so the beige mark always sits on dark.
    The home photograph keeps its night palette too. */
 header,footer,#pre{--ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
-  --soft:rgba(239,234,223,.5);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
+  --soft:rgba(239,234,223,.54);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
   --line-2:rgba(239,234,223,.22);--gline:rgba(206,192,163,.34);--hdr:rgba(18,20,28,.94);color:var(--paper)}
 footer{background:var(--ink)}
 .vhero{--paper:#EFEADF;--dim:rgba(239,234,223,.78);--soft:rgba(239,234,223,.66);--gold:#CEC0A3;--gold-hi:#E6D9B8;--ink:#12141C;color:var(--paper)}
@@ -588,9 +588,14 @@ button.irow>*{transition:transform .3s var(--ease)}
 .sn-est p{color:var(--paper);font-size:var(--t-body);line-height:1.6}
 .sn-est .k{color:var(--gold);font-size:var(--t-small);line-height:1.4;font-weight:500}
 .sn-copy{font:inherit;font-size:var(--t-label);letter-spacing:.14em;text-transform:uppercase;font-weight:500;
-  color:var(--gold);background:none;border:1px solid var(--gold);border-radius:var(--arch);padding:10px 18px;cursor:pointer}
+  color:var(--gold);background:none;border:1px solid var(--gold);border-radius:var(--arch);padding:10px 18px;cursor:pointer;
+  transition:transform .16s ease-out}
+/* press feedback, the same as .btn; the package cards are wide, so they give less */
+.sn-copy:active,.pr .filter-toggle button:active,.pr .currency-toggle button:active{transform:scale(.97)}
+.pill:active .pill-inner{transform:scale(.99)}
 .sn-copy:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
 .sn-fallback{margin-top:18px;color:var(--soft);font-size:var(--t-small);line-height:1.6;max-width:62ch}
+.sn-fallback a,.quickline a{padding-block:14px}   /* taller tap area; inline padding leaves the line alone */
 .sn-fallback a{color:var(--gold);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 
 /* contact side */
@@ -668,11 +673,14 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
   border-radius:var(--arch);padding:3px;gap:2px}
 .pr .filter-toggle button,.pr .currency-toggle button{color:var(--dim);font-family:var(--f-sans);font-size:var(--t-label);font-weight:500;
   letter-spacing:.14em;text-transform:uppercase;padding:9px 15px;border-radius:1px;white-space:nowrap;
-  transition:background-color .15s ease,color .15s ease}
+  transition:background-color .15s ease,color .15s ease,transform .16s ease-out}
 .pr .filter-toggle button.is-active,.pr .currency-toggle button.is-active{background:var(--gold);color:var(--ink)}
 .pr .filter-toggle button:focus-visible,.pr .currency-toggle button:focus-visible{outline:1px solid var(--gold-hi);outline-offset:2px}
 .pr .note-box{border:1px solid var(--line);border-radius:var(--arch);padding:14px 16px;margin-top:12px;background:var(--ink-2)}
 .pr .note-box+.note-box{margin-top:10px}
+/* shown from display:none, so it eases in from @starting-style; hiding stays instant */
+.pr .note-box{transition:opacity .22s var(--ease),transform .22s var(--ease)}
+@starting-style{.pr .note-box{opacity:0;transform:translateY(-4px)}}
 .pr .note-box p{font-size:var(--t-small);line-height:1.6;color:var(--dim)}
 .pr .note-box p+p{margin-top:8px}
 .pr .note-box strong{color:var(--paper);font-weight:500}
@@ -725,7 +733,7 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 .compare-grid .col-head .col-price{font-family:var(--f-serif);font-size:var(--t-name);line-height:1.3;color:var(--paper);font-variant-numeric:tabular-nums lining-nums}
 .compare-grid .yes{color:var(--gold)}
 .compare-grid .yes svg{width:16px;height:16px}
-.compare-grid .no{color:var(--faint)}
+.compare-grid .no{color:var(--soft)}
 
 /* builder */
 #builder-heading{scroll-margin-top:110px}
@@ -738,7 +746,7 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 .pill{position:relative;cursor:pointer}
 .pill input{position:absolute;opacity:0;width:1px;height:1px}
 .pill-inner{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line-2);border-radius:var(--arch);
-  padding:13px 15px;background:var(--ink-2);transition:border-color .15s ease,background-color .15s ease}
+  padding:13px 15px;background:var(--ink-2);transition:border-color .15s ease,background-color .15s ease,transform .16s ease-out}
 .pill input:checked+.pill-inner{border-color:var(--gold);background:var(--gold-wash)}
 .pill input:focus-visible+.pill-inner{outline:1px solid var(--gold-hi);outline-offset:2px}
 .pill-name{font-family:var(--f-serif);font-size:var(--t-name);line-height:1.3;color:var(--paper)}
@@ -777,6 +785,12 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 .summary-line{display:flex;justify-content:space-between;gap:12px;font-size:var(--t-small);line-height:1.5;color:var(--dim)}
 .summary-line span:first-child{max-width:68%}
 .summary-line span:last-child{font-variant-numeric:tabular-nums;text-align:right}
+/* a line the last tick added settles in; the rest stay put */
+.summary-line.new{animation:sl-in .18s var(--ease)}
+@keyframes sl-in{from{opacity:0;transform:translateY(-3px)}}
+/* the currency switch keeps the numbers, so the prices dip and settle to show it took */
+.pr .swap{animation:pv-swap .24s var(--ease)}
+@keyframes pv-swap{from{opacity:.35;transform:translateY(3px)}}
 .summary-line--base span:first-child{color:var(--paper)}
 .summary-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
 .summary-total span:first-child{font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
@@ -829,7 +843,11 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
   .rv-l{opacity:0}
   .rv-l>span{transform:none}
   .rv-l.show{opacity:1;transition:opacity .4s ease}
-  .btn:active,.book:active,.seq-ctrl button:active{transform:none}
+  .btn:active,.book:active,.seq-ctrl button:active,.sn-copy:active,
+  .pr .filter-toggle button:active,.pr .currency-toggle button:active,.pill:active .pill-inner{transform:none}
+  @starting-style{.pr .note-box{transform:none}}
+  @keyframes sl-in{from{opacity:0}}
+  @keyframes pv-swap{from{opacity:.35}}
   .letter-ok{transform:none}
 }
 @media (prefers-reduced-motion:reduce) and (max-width:940px){
@@ -2157,6 +2175,7 @@ function pricing(){
       renderSummary(pkg, rate);
     }
 
+    var prevLabels = null;   // labels shown last time, so only new lines animate
     function renderSummary(pkg, rate) {
       var total = basePrice(pkg);
       var lines = [];
@@ -2193,9 +2212,11 @@ function pricing(){
       });
 
       summaryLines.innerHTML = '';
+      var seen = prevLabels;
+      prevLabels = lines.map(function (line) { return line.label; });
       lines.forEach(function (line) {
         var li = document.createElement('li');
-        li.className = 'summary-line' + (line.base ? ' summary-line--base' : '');
+        li.className = 'summary-line' + (line.base ? ' summary-line--base' : '') + (seen && seen.indexOf(line.label) === -1 ? ' new' : '');
         var a = document.createElement('span');
         a.textContent = line.label;
         var b = document.createElement('span');
@@ -2277,8 +2298,14 @@ function pricing(){
 
     currencyButtons.forEach(function (btn) {
       btn.addEventListener('click', function () {
+        var was = state.currency;
         state.currency = btn.getAttribute('data-currency-value');
         onFilterOrCurrencyChange();
+        if (was !== state.currency) {
+          root.querySelectorAll('.pkg-price, .compare-grid .col-price, #summary-total-value').forEach(function (el) {
+            el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
+          });
+        }
       });
     });
 

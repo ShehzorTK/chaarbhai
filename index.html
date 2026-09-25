@@ -1373,8 +1373,8 @@ P['/about']=()=>`
       <p class="lead" style="margin-top:22px">Send us your CV and a link to your work. We read everything that comes in.</p>
     </div>
     <div class="hire-mail">
-      <a class="hire-addr" href="mailto:hiring@chaarbhai.com?subject=CV%20for%20Chaar%20Bhai">hiring<wbr>@chaarbhai.com</a>
-      <a class="btn" href="mailto:hiring@chaarbhai.com?subject=CV%20for%20Chaar%20Bhai"><span>Email your CV</span><i></i></a>
+      <a class="hire-addr" href="mailto:info@chaarbhai.com?subject=CV%20for%20Chaar%20Bhai">info<wbr>@chaarbhai.com</a>
+      <a class="btn" href="mailto:info@chaarbhai.com?subject=CV%20for%20Chaar%20Bhai"><span>Email your CV</span><i></i></a>
     </div>
   </div>
 </section>
@@ -1793,7 +1793,7 @@ themeSw.addEventListener('click',()=>{
 document.addEventListener('click',e=>{
   const a=e.target.closest('a');if(!a)return;
   if(a.classList.contains('pb'))track('review_badge_click',{platform:a.classList.contains('pb-g')?'google':'meta'});
-  else if(a.href.startsWith('mailto:hiring@'))track('hiring_email_click');
+  else if(a.href.startsWith('mailto:')&&a.closest('.hire'))track('hiring_email_click');
   else if(/instagram\.com|youtube\.com|tiktok\.com|linkedin\.com/.test(a.href))track('social_click',{network:(a.href.match(/(instagram|youtube|tiktok|linkedin)/)||[])[1]});
 });
 const main=document.getElementById('main');

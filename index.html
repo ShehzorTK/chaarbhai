@@ -229,7 +229,8 @@ nav.links a.on{color:var(--gold)}
 
 /* page transition. The old page fades out fast (150ms, no movement) and the
    new page carries the motion, sliding in from the side it sits on in the nav
-   bar. JS toggles leave-*/enter-* and waits for opacity's transitionend.
+   bar. JS toggles the leave-l,leave-r and enter-l,enter-r classes and
+   waits for opacity's transitionend.
    #main has NO transform and no will-change at rest: any transform other than
    none makes #main the containing block for position:fixed children. The
    chapter rail is moved out to <body> for the same reason, since #main does
@@ -370,6 +371,19 @@ button.irow>*{transition:transform .3s var(--ease)}
 .seq-title{font-family:var(--f-serif);font-weight:400;
   font-size:var(--t-title);line-height:1.2;letter-spacing:-.01em}
 .seq-meta{color:var(--soft);margin-top:9px}
+/* the couple, then small tags: which chapter, the event, the venue, the city */
+.seq-tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.seq-tags li{font-size:var(--t-label);font-weight:500;letter-spacing:.12em;text-transform:uppercase;line-height:1.2;
+  color:var(--dim);border:1px solid var(--line);border-radius:var(--arch);padding:6px 9px 5px}
+.seq-tags .tag-ch{color:var(--gold);border-color:var(--gold-2,var(--gold))}
+/* a chapter's strips hang off a line from its number, so it's clear which section a row is in */
+.ch-body{position:relative}
+.seq+.seq{margin-top:clamp(14px,1.8vw,24px)}
+@media(min-width:761px){
+  .ch-body{margin-left:100px}
+  .ch-body::before{content:'';position:absolute;left:-94px;top:0;bottom:0;width:1px;
+    background:linear-gradient(var(--gold-2,var(--gold)),var(--line) 70%,transparent)}
+}
 .seq-ctrl{display:flex;align-items:center;gap:12px}
 .seq-count{color:var(--gold);font-variant-numeric:tabular-nums;font-size:var(--t-label);font-weight:500;letter-spacing:.14em}
 .seq-ctrl button{width:40px;height:40px;border:1px solid var(--line);border-radius:var(--arch);
@@ -386,8 +400,8 @@ button.irow>*{transition:transform .3s var(--ease)}
 /* snapping is off while a hand is on the strip and while it glides to rest,
    so it can't fight the drag; JS lands exactly on a frame before turning it back on */
 .seq-strip.drag{cursor:grabbing;scroll-snap-type:none;user-select:none;-webkit-user-select:none}
-.frame{flex:0 0 clamp(196px,23vw,310px);scroll-snap-align:start}
-.frame .fr-img{aspect-ratio:3/4;overflow:hidden;background:var(--ink-2);position:relative;
+.frame{--w:clamp(196px,23vw,310px);flex:0 0 min(88vw,calc(var(--w)*4/3*var(--ar,.75)));scroll-snap-align:start}
+.frame .fr-img{aspect-ratio:var(--ar,3/4);overflow:hidden;background:var(--ink-2);position:relative;
   border-radius:var(--arch)}
 .frame .fr-img::after{content:'';position:absolute;inset:0;border-radius:var(--arch);
   border:1px solid transparent;transition:border-color .3s var(--ease);pointer-events:none}
@@ -397,6 +411,47 @@ button.irow>*{transition:transform .3s var(--ease)}
   padding-top:3px;flex:0 0 auto}
 .seq-bar{height:1px;background:var(--line);margin-top:24px;position:relative;overflow:hidden}
 .seq-bar i{position:absolute;inset:0;background:var(--gold);transform:scaleX(0);transform-origin:left}
+.frame .fr-img{cursor:zoom-in}
+.frame .fr-img:focus-visible{outline:1px solid var(--gold);outline-offset:4px}
+
+/* Photos can't be dragged out or long-pressed to save (the script also blocks right-click) */
+img{-webkit-user-drag:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* Larger view of a strip's photo. Always night navy, like the header. */
+#lb{--ink:#12141C;--paper:#EFEADF;--dim:rgba(239,234,223,.7);--gold:#CEC0A3;--line:rgba(239,234,223,.18);
+  position:fixed;inset:0;z-index:2000;background:#0B0C12;color:var(--paper);
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+  opacity:0;transition:opacity .28s var(--ease)}
+#lb[hidden]{display:none}
+#lb.on{opacity:1}
+html.lb-open{overflow:hidden}
+.lb-fig{margin:0;height:100vh;height:100dvh;padding:64px 0 22px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;min-width:0;touch-action:pan-y}
+.lb-fig img{width:auto;height:auto;max-width:100%;max-height:calc(100vh - 170px);max-height:calc(100dvh - 170px);
+  object-fit:contain;transform:scale(.985);transition:opacity .22s ease,transform .45s var(--ease)}
+#lb.on .lb-fig img{transform:none}
+.lb-fig img.swap{opacity:0}
+.lb-fig figcaption{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:18px;width:min(640px,100%);
+  color:var(--dim);font-size:var(--t-small);line-height:1.6}
+.lb-no{color:var(--gold);font-variant-numeric:tabular-nums;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;padding-top:3px}
+.lb-cap{color:var(--paper);flex:1 1 0;min-width:0}
+.lb-t{flex-basis:100%;font-size:var(--t-label);letter-spacing:.14em;text-transform:uppercase}
+.lb-prev,.lb-next,.lb-x{width:48px;height:48px;display:grid;place-items:center;color:var(--paper);
+  border:1px solid var(--line);border-radius:var(--arch);transition:border-color .2s,color .2s,opacity .2s}
+.lb-prev,.lb-next{margin:0 clamp(8px,2.4vw,32px)}
+.lb-x{position:absolute;top:14px;right:14px}
+.lb-prev svg,.lb-next svg,.lb-x svg{width:16px;height:16px}
+.lb-prev:disabled,.lb-next:disabled{opacity:.2;pointer-events:none}
+.lb-prev:focus-visible,.lb-next:focus-visible,.lb-x:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+@media (hover:hover){.lb-prev:hover,.lb-next:hover,.lb-x:hover{border-color:var(--gold);color:var(--gold)}}
+@media (max-width:700px){
+  #lb{grid-template-columns:minmax(0,1fr)}
+  .lb-fig{padding:64px 14px 84px}
+  .lb-fig img{max-height:calc(100dvh - 230px)}
+  .lb-prev,.lb-next{position:absolute;bottom:18px;margin:0}
+  .lb-prev{left:14px}.lb-next{right:14px}
+}
+@media (prefers-reduced-motion:reduce){.lb-fig img,#lb.on .lb-fig img{transform:none}}
 
 /* split */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px);align-items:center}
@@ -921,90 +976,60 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 </footer>
 
 <script>
-const IMG=[
-"https://i.wfolio.com/x/2liGxMhJRjilwq8i78-UqZczLd56D3TA/sTnJtdZp03LsDDiOBzLXI-I2h26Bzrzc/ljX4fKE2qNV2v0LvvAinRy4HtErEGktL/oc4wA-mNAL4QbifllH_ImIdyPKgkq9-x/21Sz1VJCDXL10kblwvkYGg.jpg",
-"https://i.wfolio.com/x/vw6sK5bQa5Fcwe87C_Ouy9fEMYEO3Vmm/MTsPCuI8SXA_GXg5fXeD-Z4Yzl9CwsQg/Rp8rK9UC4rqS4nJaMmUMjjHMJsGsw7FC/jFiBmrFj_IU-XHbIpKmRypziD6bl3Jds/Rn2vpvKVLXOPcfBTE1G9Hg.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/C2OP5mxyuuoHeelGbfOmc-o6ldA1U8cy/pzVI-IGsUbm0zy9WiLOW10o9W0WOE-Ir/af5Av7fghcAVAbnvdpWMfw.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/dJntGD6yF43lQecm4ybBTsHTH1lOW_WV/Acg6asrkwbA9odzuJSVkbdc0FU7HZBdv/LJ7YSGHF2IgNeQNLbmpL8w.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/gnVtzNcHFgvnyZuMRmvFdKBUwUK2YSO2/JxCDtxtF4_UPYonXo2sLXXL0RGzUDAx_/dhuKo2msxXX1GBHZM9hIfw.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/7XYri4fGnXljlYA2ZwRqcYLIkgNRd436/hTH37GK2M4b0TBvuEIdvOnOOdA6Dsecn/fTMkIeWWV2Su5Z6a9rBt6A.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/9zm6suxSXnNx4n47w0iyk1U9dh4ES0yN/5Ke58bJiGYJV9z5bviK6Ls1LID2hxTYL/hFmYpzq9nmII3CGlj2aaig.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/afTtY-EvfMZb7JFDtFx1KL1-_StOI0KX/FsBONMbPrK753KWje9Pn46z6S2OKnFzl/78ApYH7ohG7hZYIH2JJDmg.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/A4xrV6YfONve0ro29CFL23weLZgofZJL/GCzatBIJ5RHFh1Ov1zbS9wVFcQJbmLxw/yPFzva2fJ4o8ffyUW3v8OA.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/L6Oi2VMNKtq9CBHpkFN6tjzuV9m7lUrx/CvietaZF-rd03lcITuWX1BDh7l2yEstk/23kk2xRwcNaoPxHn94v6Gw.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/-SyELKkUoz-6-PlZSHs8thwC2yBKHgFR/bYwA9VHh-Au1HCwnghf6EYYsxY1N4C-f/D-ZOAmjzesDyWPH_TIBiIQ.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/kRDymiL35S_D52tYyEvXVus9K6xJdrUP/DAZdEVIRbww8SQ9WceZooW2m8T6ZP7d5/Im-rZf7KhzpJtSSIcHTkgg.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/4aSuw5LfG03L22mCU6cTZlxevYEarhRy/2hDFMVgpc7eV_m9fS5vl6CcHLq_xtngv/s041hPG_hiHRJqOZpnzqKg.jpg",
-"https://i.wfolio.com/x/zfNWg0RActCaYvCdP8NS6h3QcKqIOO7I/oVCmpsR2A0_zCBuWQbm7dJYwNQ6ysoqE/Wc80PHLrorBv63Qmw7W0X95BTcbO9IEP/upX1_ZUrob2BVK_XixtlRwHDZ5bpi18b/VxTcY3KqcFobhSse1cJq0A.jpg"];
+/* PORTFOLIO:start (written by drafts/portfolio/build_portfolio.py, edit portfolio.json instead) */
+const PORTFOLIO={"before":[{"couple":"Arooba & Asmat","tags":["Engagement shoot","Osgoode Hall and Union Station","Toronto"],"frames":[{"src":"photos/arooba-asmat/ChaarBhai_AAES_0007","ar":0.6667,"ws":[640,1280],"cap":"The save-the-date, in print.","alt":"The couple laugh over a mock newspaper announcing their wedding"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0099","ar":0.6667,"ws":[640,1280],"cap":"He’s still reading.","alt":"She waits in a carved archway while he peeks over the newspaper"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0131","ar":0.6667,"ws":[640,1280],"cap":"Rust, on stone.","alt":"The couple laugh against a pale carved stone wall"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0343","ar":0.6667,"ws":[640,1280],"cap":"A twirl in the courtyard.","alt":"Hand in hand, she twirls on the cobblestones"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0472_1","ar":0.6667,"ws":[640,1280],"cap":"They forget the camera.","alt":"Sitting close, holding hands and looking at each other"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0549","ar":0.6667,"ws":[640,1280],"cap":"Under the towers.","alt":"Foreheads together beneath dark glass towers"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0612","ar":0.6667,"ws":[640,1280],"cap":"A taxi goes by.","alt":"An embrace outside Union Station as an orange taxi blurs past"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0665","ar":1.5,"ws":[640,1280],"cap":"Up the stairs.","alt":"Walking up a stairwell hand in hand"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0677_1","ar":1.5,"ws":[640,1280],"cap":"Back to back.","alt":"Back to back in the stairwell, both looking at the camera"},{"src":"photos/arooba-asmat/ChaarBhai_AAES_0711","ar":1.5,"ws":[640,1280],"cap":"The last streetcar.","alt":"Standing still as a red streetcar streaks past at dusk"}]},{"couple":"Christel & Sid","tags":["Engagement shoot","Toronto"],"frames":[{"src":"photos/christel-sid/MFR_8170","ar":1.4988,"ws":[640,1280,1920],"cap":"The long way round.","alt":"The couple small on a curving lakeside path"},{"src":"photos/christel-sid/MFR_8343","ar":0.667,"ws":[640,1280],"cap":"First frame, both laughing.","alt":"On a bench, she laughs as he leans over her shoulder"},{"src":"photos/christel-sid/MFR_8704","ar":1.4993,"ws":[640,1280],"cap":"Her ring, and her look.","alt":"She smiles at the camera over his shoulder, ring on show"},{"src":"photos/christel-sid/MFR_9085","ar":1.499,"ws":[640,1280,1920],"cap":"Swans, watching.","alt":"He spins her on the beach as two swans swim by"},{"src":"photos/christel-sid/MFR_9391","ar":1.4993,"ws":[640,1280],"cap":"Up the hill, on his back.","alt":"A piggyback on top of a grassy hill"},{"src":"photos/christel-sid/MFR_9619","ar":1.4993,"ws":[640,1280],"cap":"The cork goes.","alt":"Champagne sprays as they sit on the grass"},{"src":"photos/christel-sid/MFR_9880","ar":1.4993,"ws":[640,1280],"cap":"Love wins.","alt":"The couple through a shop window painted ‘Love Wins’"},{"src":"photos/christel-sid/MFR_9908","ar":1.4992,"ws":[640,1280],"cap":"Sunflowers.","alt":"A forehead kiss in front of a sunflower mural"},{"src":"photos/christel-sid/MFR_9940","ar":1.4996,"ws":[640,1280],"cap":"One on each side.","alt":"Either side of a wave mural on a red tiled wall"},{"src":"photos/christel-sid/MFR_9963","ar":1.4993,"ws":[640,1280],"cap":"Spadina, rush hour.","alt":"Standing still as a red streetcar blurs past"}]},{"couple":"Shafiqa & Shoaib","tags":["Nikkah portraits","Royal Botanical Gardens","Burlington"],"frames":[{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0015","ar":0.6667,"ws":[640,1280],"cap":"Twice, in the pond.","alt":"Black and white: the couple and their reflection in a lily pond"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0021","ar":0.6667,"ws":[640,1280,1920],"cap":"A twirl on the bridge.","alt":"He twirls her on a small bridge over a lily pond"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0057","ar":0.667,"ws":[640,1280],"cap":"Eyes closed.","alt":"She rests her head on his shoulder"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0076","ar":0.6671,"ws":[640,1280],"cap":"His head in her lap.","alt":"He lies with his head in her lap, her lehenga spread on the grass"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0109","ar":0.6669,"ws":[640,1280],"cap":"The dupatta goes up.","alt":"Her red dupatta flies out across the sky"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0115","ar":0.667,"ws":[640,1280],"cap":"She tells him something.","alt":"She speaks, hand at her chin, as he holds her"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0138","ar":0.6667,"ws":[640,1280],"cap":"Under the maples.","alt":"A forehead kiss framed by autumn leaves"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0205","ar":1.4993,"ws":[640,1280],"cap":"On the rocks.","alt":"Sitting on the rocks, reflected in the dark pool"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0234","ar":1.4993,"ws":[640,1280],"cap":"One patch of sun.","alt":"The couple in a pool of sunlight on a forest trail"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0291","ar":0.6671,"ws":[640,1280],"cap":"Her look, over his arm.","alt":"She looks at the camera over his arm"}]},{"couple":"Shafiqa & Shoaib","tags":["Reception portraits","Harding Waterfront Estate","Mississauga"],"frames":[{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0094","ar":0.667,"ws":[640,1280],"cap":"The library.","alt":"Foreheads close in a wood-panelled library"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0139","ar":0.6669,"ws":[640,1280],"cap":"She can’t stop smiling.","alt":"Close: her smile against his dark suit"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0156","ar":1.4995,"ws":[640,1280],"cap":"Soft light.","alt":"The couple in the library through a soft glow"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0210","ar":1.5,"ws":[640,1280],"cap":"In the mirror.","alt":"The couple reflected in a gilt mirror past his shoulder"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0232","ar":0.6671,"ws":[640,1280],"cap":"The gown, all of it.","alt":"She sits with the gown spread, he stands behind"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0379","ar":1.5,"ws":[640,1280],"cap":"Red roses.","alt":"The couple with red roses, her veil trailing into the shelves"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0442","ar":1.4994,"ws":[640,1280],"cap":"From the top of the stairs.","alt":"Looking down the spiral staircase at the couple"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0551","ar":0.667,"ws":[640,1280],"cap":"The train.","alt":"Her train fans out on the terrace under a deep blue sky"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0573","ar":1.4993,"ws":[640,1280],"cap":"The veil catches the wind.","alt":"The veil flies over them like a canopy"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0658","ar":1.512,"ws":[640,1280],"cap":"The lake.","alt":"Small on the rocks against a huge sky and still water"}]},{"couple":"Alizah & Aqib","tags":["Nikkah portraits","Adamson Estate","Mississauga"],"frames":[{"src":"photos/alizah-aqib/ChaarBhai_AANE_1045","ar":1.5,"ws":[640,1280],"cap":"In the hydrangeas.","alt":"Facing each other among white hydrangeas"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1151","ar":0.6667,"ws":[640,1280],"cap":"He lifts her.","alt":"He hugs her, grinning over her shoulder"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1167","ar":0.6667,"ws":[640,1280],"cap":"Her hand.","alt":"He kisses her hand in warm backlight"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1178","ar":1.5001,"ws":[640,1280],"cap":"The light comes in sideways.","alt":"The couple by a white clapboard wall in a band of sun"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1187","ar":1.5,"ws":[640,1280],"cap":"The red door.","alt":"The couple on sport bikes in front of a red door"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1237","ar":0.6667,"ws":[640,1280],"cap":"Burnout.","alt":"Smoke from the back wheel as they sit on the bike"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1247","ar":1.5,"ws":[640,1280],"cap":"The barn, gold.","alt":"The couple in a pool of light by the old barn"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1264","ar":0.6667,"ws":[640,1280],"cap":"Stone and shadow.","alt":"The couple in front of the stone wall, leaf shadows above"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1288","ar":1.5,"ws":[640,1280],"cap":"The sun, between them.","alt":"Silhouette with the sun between their foreheads"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1325","ar":1.5,"ws":[640,1280],"cap":"A spin before the light goes.","alt":"He twirls her, backlit, against dark trees"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1332","ar":0.6667,"ws":[640,1280],"cap":"Through the dupatta.","alt":"Seen through the sheer dupatta, her hennaed hand on his chest"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_1339","ar":1.5,"ws":[640,1280],"cap":"Under it together.","alt":"Smiling, foreheads together under the veil"}]},{"couple":"Alizah & Aqib","tags":["Reception portraits","Ivori Studios","Mississauga"],"frames":[{"src":"photos/alizah-aqib/ChaarBhai_AARE_0053","ar":1.5048,"ws":[640,1280],"cap":"The swing.","alt":"She sits on a swing among pampas as he leans over her"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0152","ar":0.6667,"ws":[640,1280],"cap":"Gold on black.","alt":"Close: her eyes closed, his gaze down"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0217","ar":1.4994,"ws":[640,1280],"cap":"The arch.","alt":"The couple small in front of a plaster arch in window light"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0269","ar":1.5,"ws":[640,1280],"cap":"Through the glass.","alt":"Her face and his reflection in a window"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0275","ar":0.6672,"ws":[640,1280],"cap":"At the curtains.","alt":"The couple in silhouette against sheer curtains"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0357","ar":1.4992,"ws":[640,1280],"cap":"The velvet sofa.","alt":"Her lehenga spills across a dark velvet sofa"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0368","ar":1.5001,"ws":[640,1280],"cap":"A kiss on the forehead.","alt":"He kisses her forehead, rim light on his hair"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0378","ar":1.4991,"ws":[640,1280],"cap":"Face to face.","alt":"Facing each other on the dark set, one light on both"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0453","ar":0.667,"ws":[640,1280],"cap":"One more spin.","alt":"He spins her, the skirt flaring out"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0497","ar":0.6667,"ws":[640,1280],"cap":"Both of them, straight at you.","alt":"Close: both look into the lens"}]},{"couple":"Farazia & Farhan","tags":["Nikkah portraits","Milton"],"frames":[{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0602","ar":0.6667,"ws":[640,1280],"cap":"She looks back.","alt":"Walking away hand in hand, she looks back and laughs"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0681","ar":0.6667,"ws":[640,1280],"cap":"Her in front, him behind.","alt":"The bride sharp in front, the groom soft behind"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0701","ar":0.667,"ws":[640,1280],"cap":"Foreheads together.","alt":"Lying down, foreheads together, her hand on his face"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0738","ar":0.6669,"ws":[640,1280],"cap":"The picnic bench.","alt":"She kisses his cheek on a picnic bench"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0824","ar":0.7002,"ws":[640,1280],"cap":"Her, at the camera.","alt":"She leans into his chest and looks at the camera"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0862","ar":0.6669,"ws":[640,1280],"cap":"She laughs up at him.","alt":"He looks down, she laughs up at him"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0888","ar":0.6667,"ws":[640,1280],"cap":"That’s the one.","alt":"A big laugh, his hands on her cheeks"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0900","ar":0.6667,"ws":[640,1280],"cap":"A kiss on the forehead.","alt":"He kisses her forehead, holding her face"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0917","ar":0.667,"ws":[640,1280],"cap":"Walking back.","alt":"Walking toward the camera holding hands"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0965","ar":0.6671,"ws":[640,1280],"cap":"Up she goes.","alt":"He lifts and spins her, her dupatta flying"}]},{"couple":"Farazia & Farhan","tags":["Reception portraits","Dundurn Castle","Hamilton"],"frames":[{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0114","ar":0.667,"ws":[640,1280],"cap":"The first look, from behind him.","alt":"The bride walks up the path toward the groom’s back"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0072","ar":0.6669,"ws":[640,1280],"cap":"He turns around.","alt":"He holds her hand, smiling, at the first look"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0161","ar":0.6666,"ws":[640,1280],"cap":"Through the arch.","alt":"A stone arch frames them mid twirl"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0189","ar":0.667,"ws":[640,1280],"cap":"The gate.","alt":"The couple at the gate, a long shadow in front"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0243","ar":0.6671,"ws":[640,1280],"cap":"Down the steps.","alt":"He leads her down the curved steps of the rotunda"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0248","ar":0.6667,"ws":[640,1280],"cap":"A dance under the trees.","alt":"Dancing in dappled light under a dark canopy"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0313","ar":0.6666,"ws":[640,1280],"cap":"High five.","alt":"A high five between two columns"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0338","ar":0.6671,"ws":[640,1280],"cap":"The portico.","alt":"Black and white: the couple under the columned portico"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0391","ar":0.6667,"ws":[640,1280],"cap":"Hard light.","alt":"Side-lit portrait against the pillar and door"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0410","ar":0.667,"ws":[640,1280],"cap":"The sun between the columns.","alt":"A sunstar between giant columns, the couple in front"}]},{"couple":"Fathema & Christian","tags":["Portraits","Montreal"],"frames":[{"src":"photos/fathema-christian/ChaarBhai_FCNE_0150","ar":0.6667,"ws":[640,1280],"cap":"The ivy tower.","alt":"Full length in front of an ivy-covered stone tower"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0189","ar":0.6668,"ws":[640,1280],"cap":"Under the chandelier.","alt":"Foreheads together under a crystal chandelier"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0227","ar":0.6668,"ws":[640,1280],"cap":"A kiss on the cheek.","alt":"He kisses her cheek as she beams"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0422","ar":1.4997,"ws":[640,1280],"cap":"The portrait room.","alt":"Seated in a panelled room hung with paintings"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0491","ar":0.6669,"ws":[640,1280],"cap":"She laughs up at him.","alt":"She laughs up at him through a soft foreground"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0740","ar":0.6667,"ws":[640,1280],"cap":"A twirl in the doorway.","alt":"She twirls while he watches from a mirrored doorway"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0803","ar":0.6667,"ws":[640,1280],"cap":"Light trails.","alt":"Black and white long exposure under the chandelier"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0852","ar":1.5003,"ws":[640,1280],"cap":"Red shutters.","alt":"An embrace beside a stone manor with red shutters"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0878","ar":0.6666,"ws":[640,1280],"cap":"Nose to nose.","alt":"Close, nose to nose, both smiling"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_0920","ar":1.4999,"ws":[640,1280],"cap":"City Hall.","alt":"The couple tiny on the steps of Montreal City Hall"}]},{"couple":"Kalina & Sayyad","tags":["Portraits","Caledon"],"frames":[{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2696","ar":0.667,"ws":[640,1280],"cap":"Under the veil.","alt":"Nose to nose under a backlit veil"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2836","ar":1.4993,"ws":[640,1280],"cap":"Her look.","alt":"She smiles at the camera under the veil"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2883","ar":0.6671,"ws":[640,1280],"cap":"Dusk.","alt":"She rests on his shoulder at dusk"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2904","ar":0.667,"ws":[640,1280],"cap":"Across the grass.","alt":"He leads her across the grass by the hand"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2922","ar":1.4992,"ws":[640,1280],"cap":"The field behind them.","alt":"Standing together by the fence, the field behind"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2935","ar":0.667,"ws":[640,1280],"cap":"He can’t stop smiling.","alt":"Close: his smile, her hennaed hand on his chest"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2954","ar":0.667,"ws":[640,1280],"cap":"Blue hour.","alt":"Her hennaed hand around his neck, foreheads close"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_4048","ar":0.6669,"ws":[640,1280],"cap":"Changed for the night.","alt":"The couple in evening clothes, smiling at the camera"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_4052","ar":0.667,"ws":[640,1280],"cap":"Under the lights.","alt":"The couple under an arch of string lights"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_4066","ar":0.667,"ws":[640,1280],"cap":"The last frame.","alt":"An embrace under the string lights at night"}]}],"arrival":[{"couple":"Kalina & Sayyad","tags":["Entrances","Caledon"],"frames":[{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0132","ar":0.6667,"ws":[640,1280],"cap":"Announced.","alt":"A man at the podium announces the families"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1244","ar":0.6667,"ws":[640,1280],"cap":"His mother and grandmother, one on each arm.","alt":"The groom walks in between his mother and grandmother, who waves"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1264","ar":1.5,"ws":[640,1280],"cap":"The elders, not holding back.","alt":"Two elders in white walk in, one waving a handkerchief"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1298","ar":1.4994,"ws":[640,1280],"cap":"His side, all present.","alt":"The groom with his family under the pergola"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0369","ar":0.6667,"ws":[640,1280],"cap":"Her parents walk her in.","alt":"The bride walks in between her mother and her father, who has a cane"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0372","ar":0.6667,"ws":[640,1280],"cap":"Petals.","alt":"Guests throw petals as the bride walks in with her parents"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0388","ar":0.6667,"ws":[640,1280],"cap":"Her mother, first.","alt":"The bride embraces her mother"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1378","ar":1.4993,"ws":[640,1280],"cap":"Both hands up.","alt":"The couple raise their hands to the guests under the arch"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0400","ar":0.6667,"ws":[640,1280],"cap":"Seated, finally.","alt":"The couple sit together in front of a wall of white flowers"}]}],"ceremony":[{"couple":"Farazia & Farhan","tags":["Nikkah","Masjid","Milton"],"frames":[{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0071","ar":0.667,"ws":[640,1280],"cap":"Walked in by her parents.","alt":"The bride, veiled, walks in between her parents, her train across the floor"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0080","ar":1.4993,"ws":[640,1280],"cap":"The ribbon, held both sides.","alt":"The veiled bride smiles as her family holds a gold ribbon in front of her"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0192","ar":0.667,"ws":[640,1280],"cap":"He hears she’s here.","alt":"The groom smiles through a curtain of white flowers"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0206","ar":1.4993,"ws":[640,1280],"cap":"Her side of the curtain, and his.","alt":"The veiled bride in the foreground while the groom and elders sit at the nikkah table"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0272","ar":1.4992,"ws":[640,1280],"cap":"Qabool hai.","alt":"The groom kneels and kisses the bride’s hand under her veil"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0278","ar":1.5008,"ws":[640,1280],"cap":"The veil comes up.","alt":"The couple embrace after the veil lifts, guests watching from the floor"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0319","ar":1.4993,"ws":[640,1280],"cap":"Her grandfather’s shoulder.","alt":"The bride rests her head on an elder’s shoulder"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0449","ar":0.6672,"ws":[640,1280],"cap":"His mother, both hands.","alt":"The groom’s mother holds his face, both of them with eyes closed"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0491","ar":0.667,"ws":[640,1280],"cap":"Rings, for the cousins’ phones.","alt":"The couple laugh and hold up their rings"},{"src":"photos/farazia-farhan/ChaarBhai_FFNE_0555","ar":0.6667,"ws":[640,1280],"cap":"Her signature, laughing.","alt":"The bride laughs while signing with a white feather pen"}]},{"couple":"Alizah & Aqib","tags":["Nikkah","Masjid","Mississauga"],"frames":[{"src":"photos/alizah-aqib/ChaarBhai_AANE_0312","ar":1.5,"ws":[640,1280],"cap":"Duas, before anything.","alt":"The groom, the imam and the veiled bride raise their hands in prayer"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_0325","ar":0.6669,"ws":[640,1280],"cap":"Her name, under the veil.","alt":"The veiled bride signs the nikkah register"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_0433","ar":1.5,"ws":[640,1280],"cap":"It lands.","alt":"The bride covers her face with her hennaed hands under the veil"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_0641","ar":1.5,"ws":[640,1280],"cap":"He goes to her.","alt":"The groom reaches for the bride’s veil as she smiles"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_0665","ar":1.4992,"ws":[640,1280],"cap":"The veil, lifted.","alt":"The groom lifts the bride’s gold-edged veil beside an arched window"},{"src":"photos/alizah-aqib/ChaarBhai_AANE_0684","ar":1.5,"ws":[640,1280],"cap":"She can’t look yet.","alt":"The bride hides her face in her hands as the groom stands beside her"}]},{"couple":"Shafiqa & Shoaib","tags":["Nikkah","Gardens Event Centre","Cambridge"],"frames":[{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0352","ar":1.5001,"ws":[640,1280],"cap":"Side by side, before.","alt":"The couple sit together smiling, guests behind them"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0562","ar":0.6671,"ws":[640,1280],"cap":"Under the chaddar.","alt":"The bride walks in under a red chaddar held by her brothers, seen through roses"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0671","ar":0.6667,"ws":[640,1280],"cap":"Red, all the way down.","alt":"The bride under a heavy red veil, white flowers soft in front"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0739","ar":0.667,"ws":[640,1280],"cap":"The signing.","alt":"The veiled bride signs the nikkah certificate"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0783","ar":1.499,"ws":[640,1280],"cap":"The first hold.","alt":"The couple hug in front of a jasmine curtain after the nikkah"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0806","ar":1.4993,"ws":[640,1280],"cap":"On one knee.","alt":"The groom kneels to put the ring on under the jasmine curtain"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0814","ar":1.499,"ws":[640,1280],"cap":"The ring, on.","alt":"The groom smiles as he slides on her ring"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0824","ar":1.4991,"ws":[640,1280],"cap":"Both hands up.","alt":"The couple hold their ringed hands up to the camera"}]},{"couple":"Fathema & Christian","tags":["Nikah","Montreal"],"frames":[{"src":"photos/fathema-christian/ChaarBhai_FCNE_1596","ar":0.6667,"ws":[640,1280],"cap":"Her train, all of it.","alt":"The veiled bride sits under a floral arch, her magenta train pooling toward the camera"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_1810","ar":1.4993,"ws":[640,1280],"cap":"A wall of flowers between them.","alt":"The bride and groom sit on either side of a floral pillar"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_1924","ar":1.5,"ws":[640,1280],"cap":"Asked, and she answers.","alt":"The bride wipes tears under her magenta veil"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2058","ar":0.6667,"ws":[640,1280],"cap":"Her signature.","alt":"The bride signs the nikah certificate through strands of white garland"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2064","ar":0.6667,"ws":[640,1280],"cap":"His.","alt":"The groom signs with a white feather pen"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2182","ar":0.6667,"ws":[640,1280],"cap":"The veil, lifted.","alt":"The groom lifts the veil under the floral arch"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2204","ar":1.4998,"ws":[640,1280],"cap":"Her face, in his hands.","alt":"The groom kisses the bride’s forehead, holding her face"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2220","ar":0.6668,"ws":[640,1280],"cap":"Held.","alt":"The bride embraces the groom, her face over his shoulder"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2244","ar":1.4993,"ws":[640,1280],"cap":"Married, and grinning.","alt":"The couple smile at each other beside the floral pillar"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2264","ar":0.667,"ws":[640,1280],"cap":"The tissue comes out.","alt":"The bride, unveiled, cries into a tissue"}]},{"couple":"Kalina & Sayyad","tags":["Nikkah","Caledon"],"frames":[{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0447","ar":1.5,"ws":[640,1280],"cap":"Under the wisteria.","alt":"Wide view of the couple and the officiant under a wisteria pergola"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1502","ar":1.4988,"ws":[640,1280],"cap":"The khutbah.","alt":"The officiant speaks while the couple sit under the flowers"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0643","ar":1.5001,"ws":[640,1280],"cap":"His hand raised for them.","alt":"The officiant raises a hand in blessing over the couple"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0813","ar":1.5,"ws":[640,1280],"cap":"He’s asked.","alt":"The officiant holds the microphone to the groom"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0876","ar":1.5002,"ws":[640,1280],"cap":"She’s already gone.","alt":"The groom holds his hands together while the bride covers her face, emotional"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1667","ar":1.5,"ws":[640,1280],"cap":"She says it into the mic.","alt":"The bride laughs as she speaks into the microphone"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2249","ar":1.5,"ws":[640,1280],"cap":"Trying to keep it together.","alt":"The bride holds her hand to her mouth, the groom beside her"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2002","ar":1.5,"ws":[640,1280],"cap":"Duas.","alt":"The couple hold their palms open in prayer"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1700","ar":1.5,"ws":[640,1280],"cap":"Married.","alt":"Black and white: the couple look at each other, hands joined"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2443","ar":1.5,"ws":[640,1280],"cap":"The officiant, after.","alt":"The groom kisses the officiant’s cheek in an embrace"}]}],"reception":[{"couple":"Farazia & Farhan","tags":["Reception","The Legacy","Oakville"],"frames":[{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0702","ar":0.6666,"ws":[640,1280],"cap":"Her entrance, through the smoke.","alt":"The bride walks in through smoke between her parents"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_0731","ar":1.4993,"ws":[640,1280],"cap":"The first dance.","alt":"The couple dance between two columns of cold sparks"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_1652","ar":1.0132,"ws":[640,1280],"cap":"Watching the performances.","alt":"The couple laugh and clap from their seats"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_1710","ar":0.667,"ws":[640,1280],"cap":"Under the chandelier.","alt":"The couple dance on the floor beneath a huge chandelier"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_1763","ar":1.4993,"ws":[640,1280],"cap":"His boys, on their knees.","alt":"The groom’s friends kneel mid-dance, seen past the bride’s veil"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_1812","ar":1.4993,"ws":[640,1280],"cap":"He joins in.","alt":"The groom dances with his friends under the dome"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_1975","ar":1.4989,"ws":[640,1280],"cap":"Her turn.","alt":"The bride dances on the floor, arms up, guests clapping"}]},{"couple":"Alizah & Aqib","tags":["Reception","Apollo Convention Centre","Mississauga"],"frames":[{"src":"photos/alizah-aqib/ChaarBhai_AARE_0961","ar":0.6667,"ws":[640,1280],"cap":"The doors open.","alt":"The couple stand in the doorway between sparklers, fog on the floor"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0985","ar":0.6666,"ws":[640,1280],"cap":"Walking in on fog.","alt":"The couple walk in arm in arm through thick fog"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_0995","ar":0.6667,"ws":[640,1280],"cap":"One spin, for the room.","alt":"The groom spins the bride in front of the A&A stage"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_1386","ar":1.4055,"ws":[640,1280],"cap":"The stage.","alt":"The couple seated on stage under the A&A monogram"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_1626","ar":1.5,"ws":[640,1280],"cap":"The shoe money.","alt":"The couple laugh on stage as hands reach in during joota chupai"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_1709","ar":0.6666,"ws":[640,1280],"cap":"The cutting.","alt":"The couple smile at each other over the cake"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_1803","ar":1.5001,"ws":[640,1280],"cap":"He’s louder than the performers.","alt":"The groom cheers as the bride smiles beside him"}]},{"couple":"Shafiqa & Shoaib","tags":["Reception","Mississauga"],"frames":[{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0756","ar":1.4992,"ws":[640,1280],"cap":"Arriving in orange.","alt":"The couple seen through the windshield of an orange sports car"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_0888","ar":0.6668,"ws":[640,1280],"cap":"The Afghan entrance.","alt":"The couple walk in wearing traditional Afghan dress between sparklers"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_1345","ar":1.5,"ws":[640,1280],"cap":"Through the hoop.","alt":"The couple seen through a hoop of flowers"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_1661","ar":0.6668,"ws":[640,1280],"cap":"Her second entrance.","alt":"The bride walks in wearing a white gown, petals on the floor"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_1836","ar":1.5,"ws":[640,1280],"cap":"He heckles the performers.","alt":"The groom shouts with cupped hands while the bride laughs"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_1976","ar":1.4993,"ws":[640,1280],"cap":"The first dance.","alt":"The couple dance in fog between sparklers, guests around the floor"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_1961","ar":0.6667,"ws":[640,1280],"cap":"Up to their knees in cloud.","alt":"Close view of the first dance in fog"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_2037","ar":0.6668,"ws":[640,1280],"cap":"Still dancing.","alt":"The bride’s hands on the groom’s shoulders"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_2276","ar":1.5,"ws":[640,1280],"cap":"A word between them.","alt":"Black and white: the couple talk beside the stage"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSRE_2433","ar":1.5,"ws":[640,1280],"cap":"The toast.","alt":"The couple raise glasses under the red roses"}]},{"couple":"Fathema & Christian","tags":["Reception","Montreal"],"frames":[{"src":"photos/fathema-christian/ChaarBhai_FCNE_1549","ar":1.4999,"ws":[640,1280],"cap":"She walks in. He’s gone.","alt":"The groom wipes his eyes in front of the flower wall"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2837","ar":0.6672,"ws":[640,1280],"cap":"The grand entrance.","alt":"The couple walk in arm in arm through the floral doorway"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2858","ar":0.6667,"ws":[640,1280],"cap":"The first dance.","alt":"The couple dance in fog under the chandelier"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2911","ar":1.4998,"ws":[640,1280],"cap":"Off the floor.","alt":"The groom lifts the bride, her skirt fanning out over the fog"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_2978","ar":1.707,"ws":[640,1280],"cap":"Between the sparks.","alt":"The couple embrace between two sparkler fountains"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_3154","ar":1.4998,"ws":[640,1280],"cap":"The first bite.","alt":"The bride feeds the groom cake"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_3241","ar":0.6667,"ws":[640,1280],"cap":"The toast.","alt":"The bride laughs with a glass raised beside the cake"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_4056","ar":1.5,"ws":[640,1280],"cap":"His speech, and he can’t.","alt":"Black and white: the groom bows his head, the bride’s hand on his face"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_4282","ar":1.5,"ws":[640,1280],"cap":"Rings.","alt":"The couple exchange rings, heads bowed"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_4439","ar":1.5003,"ws":[640,1280],"cap":"The garland game, lifted.","alt":"Both lifted by friends, the bride puts a garland on the groom"}]},{"couple":"Kalina & Sayyad","tags":["Reception","Caledon"],"frames":[{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0921","ar":0.6667,"ws":[640,1280],"cap":"He thanks everyone.","alt":"The groom speaks into a microphone beside the bride"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0964","ar":0.6667,"ws":[640,1280],"cap":"The rings, shown.","alt":"The couple hold up their ringed hands, hers covered in henna"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_1058","ar":1.5,"ws":[640,1280],"cap":"The little ones’ dance.","alt":"Children dance in the tent, arms out"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2976","ar":1.5,"ws":[640,1280],"cap":"The dance her cousins rehearsed.","alt":"A dancer in a patchwork dress mid-move"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2364","ar":1.4998,"ws":[640,1280],"cap":"The front row.","alt":"Women laugh at their table during the performances"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2998","ar":1.5,"ws":[640,1280],"cap":"Speeches.","alt":"The couple laugh at a speech"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_3527","ar":1.4994,"ws":[640,1280],"cap":"Not a dry eye.","alt":"A guest wipes her tears during the speeches"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_3433","ar":1.4993,"ws":[640,1280],"cap":"A kiss after the last one.","alt":"The couple kiss by the podium under the tent"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_2868","ar":1.5,"ws":[640,1280],"cap":"Glow sticks.","alt":"Guests dance under string lights with glow sticks"},{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_3888","ar":1.4991,"ws":[640,1280],"cap":"Last one on the floor.","alt":"A girl dances alone past empty tables at night"}]}],"farewell":[{"couple":"Fathema & Christian","tags":["Rukhsati","Montreal"],"frames":[{"src":"photos/fathema-christian/ChaarBhai_FCNE_5868","ar":1.4999,"ws":[640,1280],"cap":"Her grandmother’s hands.","alt":"The bride bows to her grandmother, who holds her face"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_5890","ar":0.6666,"ws":[640,1280],"cap":"Her father.","alt":"The bride cries on her father’s shoulder"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_5911","ar":1.5001,"ws":[640,1280],"cap":"Walked out, both sides.","alt":"The bride walks out between her father and the groom, her mother in tears"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6005","ar":1.5,"ws":[640,1280],"cap":"Her mother won’t let go.","alt":"The bride sobs in her mother’s arms"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6116","ar":1.5001,"ws":[640,1280],"cap":"Her brother.","alt":"The bride’s brother cries into her dupatta"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6183","ar":1.5,"ws":[640,1280],"cap":"Down the stairs.","alt":"The bride comes down the lobby staircase with her family"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6263","ar":1.5,"ws":[640,1280],"cap":"Sparklers at the door.","alt":"The couple walk out through glass doors between sparklers"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6389","ar":0.6667,"ws":[640,1280],"cap":"Her sister, in the car.","alt":"The bride’s sister holds her in the car"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6426","ar":0.6666,"ws":[640,1280],"cap":"Her father, at the car door.","alt":"The bride’s father leans in, cheek to hers"},{"src":"photos/fathema-christian/ChaarBhai_FCNE_6475","ar":0.6666,"ws":[640,1280],"cap":"Headlights on.","alt":"The couple in the car at night, headlights on"}]},{"couple":"Farazia & Farhan","tags":["Rukhsati","The Legacy","Oakville"],"frames":[{"src":"photos/farazia-farhan/ChaarBhai_FFRE_2212","ar":0.6667,"ws":[640,1280],"cap":"Her father.","alt":"The bride hugs her father"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_2258","ar":1.5,"ws":[640,1280],"cap":"Walked out between them.","alt":"The bride in tears between her father and the groom"},{"src":"photos/farazia-farhan/ChaarBhai_FFRE_2344","ar":0.6667,"ws":[640,1280],"cap":"In the car.","alt":"The bride in the car at night, her henna lit"}]},{"couple":"Alizah & Aqib","tags":["Rukhsati","Apollo Convention Centre","Mississauga"],"frames":[{"src":"photos/alizah-aqib/ChaarBhai_AARE_2278","ar":1.4991,"ws":[640,1280],"cap":"The Quran, over her head.","alt":"The Quran held over the veiled bride as she walks out"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_2310","ar":0.667,"ws":[640,1280],"cap":"Everyone at the door.","alt":"The bride in the car, the groom at the wheel, family behind"},{"src":"photos/alizah-aqib/ChaarBhai_AARE_2312","ar":0.667,"ws":[640,1280],"cap":"Gone.","alt":"The veiled bride in the car, the groom driving"}]},{"couple":"Shafiqa & Shoaib","tags":["Rukhsati","Gardens Event Centre","Cambridge"],"frames":[{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_1767","ar":1.5,"ws":[640,1280],"cap":"Through the doors.","alt":"The couple walk out through wooden doors with family"},{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_1784","ar":1.5,"ws":[640,1280],"cap":"The doors go up.","alt":"The bride steps into an orange sports car"}]}]};
+const PICKS={"hero":{"src":"photos/extra/sunset-rocks","ar":1.5,"ws":[640,1280,1920],"alt":"A couple on the rocks by the sea at sunset"},"about":{"src":"photos/christel-sid/MFR_8170","ar":1.4988,"ws":[640,1280,1920],"alt":"The couple small on a curving lakeside path"},"stay":{"src":"photos/christel-sid/MFR_9085","ar":1.499,"ws":[640,1280,1920],"alt":"He spins her on the beach as two swans swim by","pos":"80% 50%"},"back":{"src":"photos/shafiqa-shoaib/ChaarBhai_SSNE_0021","ar":0.6667,"ws":[640,1280,1920],"alt":"He twirls her on a small bridge over a lily pond"},"covers":{"ceremony":{"src":"photos/fathema-christian/ChaarBhai_FCNE_2182","ar":0.6667,"ws":[640,1280],"alt":"The groom lifts the veil under the floral arch"},"arrival":{"src":"photos/kalina-sayyad/ChaarBhai_KSEE_0372","ar":0.6667,"ws":[640,1280],"alt":"Guests throw petals as the bride walks in with her parents"},"reception":{"src":"photos/alizah-aqib/ChaarBhai_AARE_0985","ar":0.6666,"ws":[640,1280],"alt":"The couple walk in arm in arm through thick fog"},"farewell":{"src":"photos/fathema-christian/ChaarBhai_FCNE_6005","ar":1.5,"ws":[640,1280],"alt":"The bride sobs in her mother’s arms"},"before":{"src":"photos/arooba-asmat/ChaarBhai_AAES_0549","ar":0.6667,"ws":[640,1280],"alt":"Foreheads together beneath dark glass towers"}}};
+/* PORTFOLIO:end */
 
-/* Homepage hero image. 11 is picker image 12. */
 /* Homepage reel: a YouTube video id, and the stretch of it that loops
    (seconds). 6 skips the title card; 60 seconds of footage from there. */
 const REEL='NjDgSJSYF78', REEL_FROM=6, REEL_TO=66;
-const HERO=11;
 
 const T=['#191C26','#1D2030','#232735','#1B1E29','#202431','#262A38'];   /* image-failed fallbacks, from the ink ramp */
-function ph(i,alt='A wedding photographed by Chaar Bhai'){const a=T[i%T.length],b=T[(i+2)%T.length];
- return `<img src="${IMG[i%IMG.length]}" draggable="false" alt="${esc(alt)}"
+/* One photo from PORTFOLIO or PICKS: web-sized WebP copies in site/photos.
+   `sizes` says how wide it shows, so the browser fetches the smallest copy that
+   stays sharp. Everything below the first screen loads lazily. */
+function pic(f,sizes,{alt=f.alt,eager=false,cls=''}={}){const a=T[0],b=T[2];
+ const set=f.ws.map(w=>`${f.src}-${w}.webp ${w}w`).join(', ');
+ return `<img${cls?` class="${cls}"`:''} src="${f.src}-${f.ws[0]}.webp" srcset="${set}" sizes="${sizes}"
+ width="${f.ws[0]}" height="${Math.round(f.ws[0]/f.ar)}" ${eager?'fetchpriority="high"':'loading="lazy"'} decoding="async"
+ draggable="false" alt="${esc(alt)}"${f.pos?` style="object-position:${f.pos}"`:''}
  onerror="this.style.display='none';(this.closest('.fr-img,.arch,.thumb,.pk-m,.cta-bg,.hero-arch')||this.parentNode).style.background='linear-gradient(150deg,${a},${b})'">`}
 
 const CHAPTERS=[
+ {id:'before',no:'07',short:'Portraits',name:'Portraits',
+  alt:'Engagement · Nikkah and reception portraits',
+  desc:'An hour away from everyone, sometimes months before, sometimes between the ceremony and the reception. Two people, whatever light there is, and nobody watching.'},
+
  {id:'night',no:'01',short:'Night before',name:'The night before',
-  alt:'Dholki · Sangeet · Jaggo · Mayoun',start:0,
-  desc:'Days before anything official happens. The house fills up, someone digs the dhol out of a cupboard, and nobody goes home.',
-  seq:{title:'Nobody goes home',trad:'A dholki',caps:[
-   'The dhol comes out of the cupboard.','Her cousins learn the chorus.','Someone’s mother, laughing.',
-   'Hands on the drum skin.','The younger ones at the edge, watching.','A phone torch, for light.',
-   'The first proper round.','Tea, at eleven.','Nobody has gone home.','The last verse.']}},
+  alt:'Dholki · Sangeet · Jaggo · Mayoun',
+  desc:'Days before anything official happens. The house fills up, someone digs the dhol out of a cupboard, and nobody goes home.'},
 
  {id:'henna',no:'02',short:'Henna',name:'Henna and haldi',
-  alt:'Mehndi · Haldi · Gaye holud · Vatna',start:2,
-  desc:'Henna, turmeric, or both, depending on the family. Whatever yours calls it, it is the loudest and most crowded room of the week.',
-  seq:{title:'Green and gold',trad:'A mehndi',caps:[
-   'Marigold, before anyone arrives.','The paste, still cold.','Her palm, opened.','The first line.',
-   'Her sister holds the plate.','Two hours in.','Drying, and she can’t touch anything.',
-   'The dance the boys rehearsed.','The dance the girls rehearsed better.','Her name, hidden in the pattern.',
-   'Gold on green.','The plates go back to the kitchen.']}},
-
- {id:'ceremony',no:'03',short:'Ceremony',name:'The ceremony',
-  alt:'Nikkah · Anand Karaj · Pheras · Bibaho',start:4,
-  desc:'Usually the quietest hour of the whole week, and the only part of it that is actually binding.',
-  seq:{title:'The third time',trad:'A nikkah',caps:[
-   'The room, before.','The register, opened.','The maulvi’s hands.','Asked once.','Asked twice.',
-   'Asked a third time.','Qabool hai.','Her father, at the back.','The signing.',
-   'Duas, all at once.','The first look after.']}},
+  alt:'Mehndi · Haldi · Gaye holud · Vatna',
+  desc:'Henna, turmeric, or both, depending on the family. Whatever yours calls it, it is the loudest and most crowded room of the week.'},
 
  {id:'arrival',no:'04',short:'Arrival',name:'The arrival',
-  alt:'Baraat · Milni · Ghodi charhai',start:6,
-  desc:'The groom’s side arriving. You hear it a long time before you see it, and there is almost always a negotiation at the door.',
-  seq:{title:'Drums, two streets away',trad:'A baraat',caps:[
-   'The street, still empty.','Drums, two blocks away.','The sehra, over his face.',
-   'His brothers, walking backwards.','Rose petals, mid air.','The doors.','Her side, waiting.',
-   'The joota chupai begins.','Negotiations.','He pays.','Seated, finally.']}},
+  alt:'Baraat · Milni · Entrances',
+  desc:'Both families walking in. You hear it a long time before you see it, and there is always somebody’s grandmother waving at the back.'},
+
+ {id:'ceremony',no:'03',short:'Ceremony',name:'The ceremony',
+  alt:'Nikkah · Anand Karaj · Pheras · Bibaho',
+  desc:'Usually the quietest hour of the whole week, and the only part of it that is actually binding.'},
 
  {id:'reception',no:'05',short:'Reception',name:'The reception',
-  alt:'Walima · Reception · Bou bhat',start:8,
-  desc:'The formal one. The photographed one. The one the aunts have opinions about.',
-  seq:{title:'The long table',trad:'A walima',caps:[
-   'The hall, an hour before.','Candles, lit by four people.','Her entrance.','The stage.',
-   'Aunts, in formation.','The cutting.','Speeches nobody prepared.','The floor fills.',
-   'His grandmother dances.','Last song.']}},
+  alt:'Walima · Reception · Bou bhat',
+  desc:'The formal one. The photographed one. The one the aunts have opinions about.'},
 
  {id:'farewell',no:'06',short:'Farewell',name:'The farewell',
-  alt:'Rukhsati · Vidaai · Doli',start:10,
-  desc:'Twenty minutes, and the hardest part of the whole week to shoot properly.',
-  seq:{title:'The leaving',trad:'A rukhsati',caps:[
-   'The car, waiting.','Her mother won’t let go.','The Quran, held over her head.','Under it, she walks.',
-   'Her father’s hands.','Her brothers at the door.','The threshold.','She turns around once.',
-   'The door closes.','Her father, after.','The street, after.']}},
-
- {id:'before',no:'07',short:'Portraits',name:'Before it begins',
-  alt:'Engagement · Mangni · Roka · Portraits',start:12,
-  desc:'Before any of it starts. An hour of light, two people who have never been photographed properly, and nobody watching.',
-  seq:{title:'Twenty minutes of gold',trad:'An engagement shoot',caps:[
-   'First frame, both nervous.','She fixes his collar.','The light drops.','Gold, and it won’t last.',
-   'They forget the camera.','That’s the one.','Walking back.','Blue hour.']}}
-];
+  alt:'Rukhsati · Vidaai · Doli',
+  desc:'Twenty minutes, and the hardest part of the whole week to shoot properly.'}
+]
+/* Each chapter shows the real weddings in PORTFOLIO, one strip per event.
+   A chapter with no photos yet stays hidden until one is added. */
+ .map(c=>({...c,seqs:PORTFOLIO[c.id]||[],cover:PICKS.covers[c.id]}))
+ .filter(c=>c.seqs.length)
+ .map((c,i)=>({...c,no:String(i+1).padStart(2,'0'),frames:c.seqs.reduce((n,q)=>n+q.frames.length,0)}));
 
 /* Packages, from the Chaar Bhai Price Book (still marked as a draft: see PRODUCT.md).
    One source for the package cards, the compare table and the builder.
@@ -1141,7 +1166,7 @@ P['/']=()=>`
          looped, no controls. The poster photo stays until YouTube reports the
          video is actually playing, so a blocked autoplay never shows a play
          button. Reduced-motion visitors keep the photo. See reel(). -->
-    <img class="vhero-poster" src="${IMG[HERO]}" alt="">
+    ${pic(PICKS.hero,'100vw',{alt:'',eager:true,cls:'vhero-poster'})}
     <div id="reel"></div>
   </div>
   <div class="vhero-in">
@@ -1178,7 +1203,7 @@ P['/']=()=>`
   <div class="ilist">
     ${CHAPTERS.map((c,i)=>`
       <button class="irow short rv" data-nav-to="#/portfolio" data-then="ch-${c.id}" data-d="${i%4}">
-        <span class="thumb">${ph(c.start,'')}</span>
+        <span class="thumb">${pic(c.cover,'62px',{alt:''})}</span>
         <span class="t">${c.name}</span>
         <span class="y">View</span>
       </button>`).join('')}
@@ -1192,7 +1217,7 @@ P['/']=()=>`
       <h2 class="d2 rv" data-d="1">We stay out<br>of the way</h2>
       <p class="lead rv" data-d="2" style="margin-top:26px">The aim is to be as unobtrusive as we can, so most of the day gets documented as it actually happens. When a shot needs setting up we’ll step in and direct it, then get out of the way again.</p>
     </div>
-    <figure class="arch rv-img" data-d="2" style="aspect-ratio:4/5">${ph(6)}</figure>
+    <figure class="arch rv-img" data-d="2" style="aspect-ratio:4/5">${pic(PICKS.stay,'(max-width: 800px) 92vw, 44vw')}</figure>
   </div>
 </section>
 
@@ -1226,7 +1251,7 @@ P['/']=()=>`
 P['/portfolio']=()=>`
 <section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(40px,6vw,70px)">
   <h1 class="d1 rv" data-d="1">The archive</h1>
-  <p class="lead rv" data-d="2" style="margin-top:26px">Most photographers show you their ten best frames, which really only tells you they can take ten good photos. These are grouped by the moment rather than by tradition, because most weddings we shoot have these nights in them, whatever your family calls them. Each set is one of them, in the order it happened.</p>
+  <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened: one couple to a row, from the first portrait to the goodbye at the end of the night. Tap any photo to see it bigger.</p>
 </section>
 
 <section style="padding-top:0;padding-bottom:clamp(20px,3vw,44px)">
@@ -1234,10 +1259,10 @@ P['/portfolio']=()=>`
     ${CHAPTERS.map((c,i)=>`
       <button class="irow rv" data-jump="ch-${c.id}" data-d="${i%4}">
         <span class="n">${c.no}</span>
-        <span class="thumb">${ph(c.start,'')}</span>
+        <span class="thumb">${pic(c.cover,'62px',{alt:''})}</span>
         <span class="t">${c.name}</span>
         <span class="c">${c.alt}</span>
-        <span class="y">${c.seq.caps.length} frames</span>
+        <span class="y">${c.frames} frames</span>
       </button>`).join('')}
   </div>
 </section>
@@ -1256,26 +1281,29 @@ ${CHAPTERS.map(c=>`
       <p class="ch-desc rv" data-d="2">${c.desc}</p>
     </div>
   </div>
-  <div class="seq">
+  <div class="ch-body">
+  ${c.seqs.map(q=>`
+  <div class="seq" data-label="${esc([q.couple,...q.tags].join(' · '))}">
     <div class="seq-head">
       <div>
-        <h3 class="seq-title rv">${c.seq.title}</h3>
-        <div class="seq-meta mono rv" data-d="1">${c.seq.trad} · ${c.seq.caps.length} frames, in order</div>
+        <h3 class="seq-title rv">${q.couple}</h3>
+        <ul class="seq-tags rv" data-d="1"><li class="tag-ch">${c.name}</li>${q.tags.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
       </div>
       <div class="seq-ctrl rv" data-d="1">
-        <span class="seq-count">01 / ${String(c.seq.caps.length).padStart(2,'0')}</span>
+        <span class="seq-count">01 / ${String(q.frames.length).padStart(2,'0')}</span>
         <button class="sq-prev" aria-label="Previous frame">${ARROW('l')}</button>
         <button class="sq-next" aria-label="Next frame">${ARROW('r')}</button>
       </div>
     </div>
     <div class="seq-strip rv">
-      ${c.seq.caps.map((cap,j)=>`
-        <figure class="frame">
-          <div class="fr-img">${ph(c.start+j)}</div>
-          <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${cap}</span></figcaption>
+      ${q.frames.map((f,j)=>`
+        <figure class="frame${f.ar>1?' wide':''}" style="--ar:${f.ar}">
+          <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,f.ar>1?'(max-width: 600px) 88vw, 620px':'(max-width: 600px) 60vw, 310px')}</div>
+          <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${f.cap}</span></figcaption>
         </figure>`).join('')}
     </div>
     <div class="seq-bar"><i></i></div>
+  </div>`).join('')}
   </div>
 </section>`).join('')}
 
@@ -1293,7 +1321,7 @@ P['/about']=()=>`
 </section>
 
 <section style="padding:0 var(--pad)">
-  <figure class="arch rv-img" style="aspect-ratio:21/9">${ph(8)}</figure>
+  <figure class="arch rv-img" style="aspect-ratio:21/9">${pic(PICKS.about,'100vw')}</figure>
 </section>
 
 <section>
@@ -1325,7 +1353,7 @@ P['/about']=()=>`
 
 <section class="band">
   <div class="band-in">
-    <figure class="arch rv-img" style="aspect-ratio:4/5">${ph(2)}</figure>
+    <figure class="arch rv-img" style="aspect-ratio:4/5">${pic(PICKS.back,'(max-width: 800px) 92vw, 44vw')}</figure>
     <div>
       <h2 class="d2 rv" data-d="1">We show you the<br>back of the camera</h2>
       <p class="lead rv" data-d="2" style="margin-top:26px">During the day we’ll come over and show you what we just shot, so you can tell us if something’s off while there’s still time to fix it. Costs us two minutes. Saves a lot of disappointment later.</p>
@@ -1827,6 +1855,12 @@ function dragScroll(){
     const up=e=>{
       if(!down)return;
       down=false;
+      if(Math.abs(e.clientX-sx)<6){                // a click, not a drag: open that photo larger
+        release();t.scrollTo({left:sl,behavior:'auto'});
+        const f=document.elementFromPoint(e.clientX,e.clientY);
+        if(e.type==='pointerup'&&f&&f.closest('.frame'))lightbox(f.closest('.frame'));
+        return;
+      }
       const a=samples[0],b=samples[samples.length-1],dt=b.t-a.t;
       const v=dt>0&&e.timeStamp-b.t<60?(b.x-a.x)/dt:0;   // px/ms; a pause before letting go means no fling
       const x0=frames[0].offsetLeft,pos=frames.map(f=>f.offsetLeft-x0);
@@ -1845,6 +1879,79 @@ function dragScroll(){
     t.addEventListener('scrollend',()=>{if(!down&&settle)release()});
   });
 }
+/* Larger view. A click on a frame (Enter or Space from the keyboard) opens it
+   full screen; the arrows, arrow keys or a swipe step through that strip.
+   Mouse clicks come from dragScroll(), which owns the pointer on the strip. */
+let LB=null;
+function lightbox(frame){
+  if(!LB){
+    const el=document.createElement('div');
+    el.id='lb';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Photo');
+    el.innerHTML=`<button class="lb-x" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></button>
+      <button class="lb-prev" aria-label="Previous photo">${ARROW('l')}</button>
+      <figure class="lb-fig"><img alt="" draggable="false"><figcaption><span class="lb-no"></span><span class="lb-cap"></span><span class="lb-t mono"></span></figcaption></figure>
+      <button class="lb-next" aria-label="Next photo">${ARROW('r')}</button>`;
+    document.body.appendChild(el);
+    const img=el.querySelector('img'),q=c=>el.querySelector(c);
+    LB={el,img,list:[],i:0,title:'',opener:null};
+    LB.show=i=>{
+      const L=LB.list; LB.i=i=Math.max(0,Math.min(L.length-1,i));
+      const src=L[i].querySelector('.fr-img img');
+      img.classList.add('swap');
+      const nxt=new Image(); nxt.sizes='94vw'; nxt.srcset=src.srcset;
+      const put=()=>{img.sizes='94vw';img.srcset=src.srcset;img.src=src.src;img.alt=src.alt;img.classList.remove('swap')};
+      nxt.onload=put; nxt.onerror=put; nxt.src=src.src;
+      q('.lb-no').textContent=String(i+1).padStart(2,'0')+' / '+String(L.length).padStart(2,'0');
+      q('.lb-cap').textContent=L[i].querySelector('.fr-cap span:last-child').textContent;
+      q('.lb-t').textContent=LB.title;
+      q('.lb-prev').disabled=i===0; q('.lb-next').disabled=i===L.length-1;
+    };
+    LB.close=()=>{
+      el.classList.remove('on');document.documentElement.classList.remove('lb-open');
+      setTimeout(()=>{if(!el.classList.contains('on'))el.hidden=true},reduceMotion()?0:280);
+      const f=LB.list[LB.i];                      // leave the strip on the photo last viewed
+      if(f)f.closest('.seq-strip').scrollTo({left:f.offsetLeft-f.parentNode.firstElementChild.offsetLeft,behavior:'auto'});
+      if(LB.opener)LB.opener.focus({preventScroll:true});
+    };
+    q('.lb-x').addEventListener('click',LB.close);
+    q('.lb-prev').addEventListener('click',()=>LB.show(LB.i-1));
+    q('.lb-next').addEventListener('click',()=>LB.show(LB.i+1));
+    el.addEventListener('click',e=>{if(e.target===el||e.target.classList.contains('lb-fig'))LB.close()});
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Escape')LB.close();
+      else if(e.key==='ArrowLeft')LB.show(LB.i-1);
+      else if(e.key==='ArrowRight')LB.show(LB.i+1);
+      else if(e.key==='Tab'){                     // keep focus inside the viewer
+        const b=[...el.querySelectorAll('button:not(:disabled)')],k=b.indexOf(document.activeElement);
+        e.preventDefault();b[(k+(e.shiftKey?-1:1)+b.length)%b.length].focus();
+      }
+    });
+    let sx=null,sy=0;                             // swipe on touch screens
+    q('.lb-fig').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'){sx=e.clientX;sy=e.clientY}});
+    q('.lb-fig').addEventListener('pointerup',e=>{
+      if(sx===null)return;const dx=e.clientX-sx,dy=e.clientY-sy;sx=null;
+      if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))LB.show(LB.i+(dx<0?1:-1));
+    });
+  }
+  const seq=frame.closest('.seq');
+  LB.list=[...seq.querySelectorAll('.frame')];
+  LB.title=seq.dataset.label;
+  LB.opener=frame.querySelector('.fr-img');
+  LB.show(LB.list.indexOf(frame));
+  LB.el.hidden=false;document.documentElement.classList.add('lb-open');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>LB.el.classList.add('on')));
+  LB.el.querySelector('.lb-x').focus({preventScroll:true});
+}
+document.addEventListener('click',e=>{            // touch taps and keyboard; mouse goes through dragScroll()
+  const f=e.target.closest&&e.target.closest('.frame .fr-img');
+  if(f&&!(e.pointerType==='mouse'))lightbox(f.closest('.frame'));
+});
+document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.frame .fr-img')){e.preventDefault();lightbox(e.target.closest('.frame'))}
+});
+/* No right-click "Save image" and no dragging photos out. Screenshots can't be stopped. */
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('img,#lb'))e.preventDefault()});
+document.addEventListener('dragstart',e=>{if(e.target.tagName==='IMG')e.preventDefault()});
 let seqUpdaters=[];
 addEventListener('resize',()=>seqUpdaters.forEach(f=>f()),{passive:true});
 function sequences(){
@@ -2616,7 +2723,7 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
     return;
   }
 
-  const TOTAL=IMG.length+1;          // every image, plus the webfonts
+  const TOTAL=2;                     // the home photo, plus the webfonts; the rest load as they come into view
   let done=0, real=0, shown=0, finished=false;
   const t0=performance.now();
   let last=t0;
@@ -2624,11 +2731,12 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
 
   const tick=()=>{ done++; real=Math.min(done/TOTAL,1); };
 
-  IMG.forEach(src=>{
-    const im=new Image();
-    im.onload=tick; im.onerror=tick;   // a dead CDN must not stall the site
-    im.src=src;
-  });
+  {
+    const im=new Image(), f=PICKS.hero;
+    im.onload=tick; im.onerror=tick;   // a missing file must not stall the site
+    im.sizes='100vw'; im.srcset=f.ws.map(w=>`${f.src}-${w}.webp ${w}w`).join(', ');   // the same copy the page will use
+    im.src=`${f.src}-${f.ws[0]}.webp`;
+  }
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(tick,tick);
 
   function paint(p){

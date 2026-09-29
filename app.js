@@ -930,7 +930,14 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('img,#lb'))e.preventDefault()});
 document.addEventListener('dragstart',e=>{if(e.target.tagName==='IMG')e.preventDefault()});
 let seqUpdaters=[];
-addEventListener('resize',()=>seqUpdaters.forEach(f=>f()),{passive:true});
+/* The strip counters only depend on the width. iPhone Safari fires resize every time its toolbars slide in or out
+   (so on every change of scroll direction); re-measuring all ~130 strips then froze the page for a moment, right
+   when the header should come back. Now: width changes only, once per frame, and only the live strips. */
+let seqW=innerWidth,seqRaf=0;
+addEventListener('resize',()=>{
+  if(innerWidth===seqW)return;seqW=innerWidth;
+  cancelAnimationFrame(seqRaf);seqRaf=requestAnimationFrame(()=>stripIO.forEach((io,strip)=>strip._upd&&strip._upd()));
+},{passive:true});
 function sequences(seqs){
   seqs.forEach(seq=>{
     const strip=seq.querySelector('.seq-strip'),cnt=seq.querySelector('.seq-count'),

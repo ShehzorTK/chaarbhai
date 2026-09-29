@@ -27,6 +27,8 @@ const I={
   play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>',
   pause:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" fill="currentColor"/></svg>',
   off:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  full:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  unfull:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   on:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
@@ -37,9 +39,9 @@ const writeSound=on=>{try{sessionStorage.setItem(SND_KEY,on?'1':'0')}catch(e){}}
 (function(){
   const h=document.getElementById('hdr');if(!h)return;
   let last=-1;                          // only write when it changes: a new value on <html> restyles the whole page
-  const set=()=>{const v=h.offsetHeight;if(v!==last){last=v;document.documentElement.style.setProperty('--hh',v+'px')}};
-  set();addEventListener('resize',set);
-  if(window.ResizeObserver)new ResizeObserver(set).observe(h);
+  const set=()=>{const v=h.offsetHeight;if(v!==last){last=v;document.documentElement.style.setProperty('--hh',v+'px');setTimeout(realign,0)}};   // later: S isn't declared yet on the first call
+  set();   // the observer below catches every real change in the header's size, after layout (a window resize listener forced one)
+  if(window.ResizeObserver)new ResizeObserver(set).observe(h);else addEventListener('resize',set);
 })();
 
 /* open the connections early (a few hundred ms saved on a phone) */
@@ -124,6 +126,7 @@ function slideHTML(d,i){
       <div class="vf-ctl">
         <button class="vf-mute" type="button" aria-label="Unmute">${I.off}</button>
         <button class="vf-seek" type="button" aria-label="Seek. Use the left and right arrow keys."><i></i></button>
+        <button class="vf-fs" type="button" aria-label="Full screen">${I.full}</button>
         <a class="vf-yt" href="${url}" target="_blank" rel="noopener" aria-label="Watch on YouTube (opens in a new tab)">YouTube</a>
       </div>
     </div>
@@ -189,7 +192,8 @@ function open(id){
     const e=es[es.length-1];
     S.inView=e.intersectionRatio>=0.5;
     document.body.classList.toggle('vf-in',S.inView);
-    if(S.inView){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}   // the header (and its Photos | Films switch) stays while the feed is on screen
+    if(S.inView){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
+    if(S.inView&&!S.aligned){S.aligned=true;setTimeout(realign,400)}   // after the slide down, check nothing moved under it   // the header (and its Photos | Films switch) stays while the feed is on screen
     syncAway();
   },{threshold:[0,0.5]});
   S.vio.observe(root);
@@ -200,6 +204,12 @@ function open(id){
   activate(startAt);
   alignFeed(!found);      // a link to one video lands on it at once; the Films button slides down to the feed
 }
+
+/* Something above the feed changed size after it was lined up (the web fonts arriving and rewrapping the heading,
+   the header changing height, the phone turning): line it up again, if the feed is the thing on screen. */
+function realign(){if(S&&S.inView&&!document.body.classList.contains('vf-full'))requestAnimationFrame(()=>alignFeed(false))}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(realign);
+{let w=innerWidth;addEventListener('resize',()=>{if(innerWidth!==w){w=innerWidth;setTimeout(realign,250)}},{passive:true})}
 
 /* put the feed's top edge just under the site header, so it fills the screen */
 function alignFeed(smooth){
@@ -219,6 +229,7 @@ function jump(i,mode){
 
 function close(opts){
   if(!S)return;
+  if(isFull())exitFull();
   const s=S; S=null;
   clearTimeout(s.deb);clearTimeout(s.flashT);clearTimeout(s.nbT);clearInterval(s.poll);
   s.io.disconnect();s.vio.disconnect();
@@ -386,6 +397,7 @@ function activate(i){
   if(i===S.active)return;
   const prevEv=S.lastEv,d=S.data[i];
   dbg('vf active '+i+' '+curId(d));
+  if(isFull())exitFull();
   S.active=i;
   S.players.forEach((r,k)=>{if(k!==i)pause(r)});
   syncWindow();loadThumbs();
@@ -509,6 +521,33 @@ function seekBy(secs){
   try{const t=r.yt.getDuration();r.yt.seekTo(Math.max(0,Math.min(t,r.yt.getCurrentTime()+secs)),true)}catch(e){}
 }
 
+/* ---------- full screen ----------
+   Desktop, Android and iPad use the browser's real full screen on the player's frame. iPhone Safari only allows that
+   for a bare <video>, never a YouTube player, so there the frame is laid over the whole page instead (turn the phone
+   sideways and it fills the screen). Moving to another film, Escape, or the button again leaves it. */
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement||null;
+function isFull(){return !!(fsEl()||(S&&S.root.querySelector('.vf-frame.is-full')))}
+function markFull(on){
+  if(!S)return;
+  S.slides.forEach(el=>{const b=$('.vf-fs',el);b.innerHTML=on?I.unfull:I.full;b.setAttribute('aria-label',on?'Exit full screen':'Full screen')});
+}
+function enterFull(){
+  if(!S)return;const fr=frameOf(S.active);
+  const real=document.fullscreenEnabled&&fr.requestFullscreen?()=>fr.requestFullscreen()
+    :document.webkitFullscreenEnabled&&fr.webkitRequestFullscreen?()=>fr.webkitRequestFullscreen():null;
+  const pseudo=()=>{fr.classList.add('is-full');document.body.classList.add('vf-full');markFull(true)};
+  if(real){try{const p=real();if(p&&p.catch)p.catch(pseudo)}catch(e){pseudo()}}
+  else pseudo();
+  const r=S.players.get(S.active);if(r)r.user=true;
+}
+function exitFull(){
+  if(fsEl()){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document)}catch(e){}}
+  if(S)S.root.querySelectorAll('.vf-frame.is-full').forEach(f=>f.classList.remove('is-full'));
+  document.body.classList.remove('vf-full');markFull(false);
+  setTimeout(realign,60);   // the phone may have turned while it was full screen
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(t=>document.addEventListener(t,()=>{const f=isFull();markFull(f);if(!f)setTimeout(realign,60)}));
+
 /* ---------- events ---------- */
 function onClick(e){
   if(!S)return;
@@ -518,6 +557,7 @@ function onClick(e){
   if(t.closest('.vf-hit')){toggle();return}
   if(t.closest('.vf-sound')){setSound(true);return}
   if(t.closest('.vf-mute')){setSound(!S.soundOn);return}
+  if(t.closest('.vf-fs')){isFull()?exitFull():enterFull();return}
   const sk=t.closest('.vf-seek');
   if(sk){
     if(e.detail===0)return;                       // a keyboard click; the arrow keys do the seeking
@@ -536,6 +576,7 @@ function onSeekKey(e){
   else if(e.key==='ArrowLeft'){e.preventDefault();seekBy(-5)}
 }
 function onKey(e){
+  if(S&&e.key==='Escape'&&document.body.classList.contains('vf-full')){exitFull();return}
   if(!S||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey)return;
   const t=e.target;
   if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
@@ -548,6 +589,7 @@ function onKey(e){
     e.preventDefault();toggle();
   }
   else if(k==='m'||k==='M'){setSound(!S.soundOn)}
+  else if(k==='f'||k==='F'){isFull()?exitFull():enterFull()}
 }
 /* away = the tab is hidden, or less than half the feed is on screen */
 function syncAway(){

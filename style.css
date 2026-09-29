@@ -968,6 +968,34 @@ body.vf-on>.rail{display:none}
   text-transform:uppercase;color:var(--soft);text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--line-2)}
 @media (hover:hover){.vf-ytc:hover{color:var(--paper)}}
 .vf-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-@media (max-height:520px){.vf{--vf-cap:76px}.vf-meta{display:none}.vf-film,.vf-ytc{min-height:36px}}
+/* Phones on their side (and any short, wide window): one header row, a slim chip bar, and the film beside its
+   caption instead of above it, so the film gets the whole height. */
+@media (orientation:landscape) and (max-height:540px){
+  header{padding-top:8px;padding-bottom:8px}
+  .brand img{height:28px}
+  .brand{margin-right:0}
+  .hdr-sub{flex:0 0 auto;order:1;margin:0 auto 0 18px}
+  .theme-sw,.burger{order:2}
+  .vf{--vfb:46px}
+  .vf-chip{min-height:30px;padding:0 12px}
+  .vf-slide{padding:8px var(--pad)}
+  .vf-wrap{width:100%;height:100%;display:flex;align-items:center;gap:clamp(14px,3vw,28px)}
+  .vf-frame{flex:0 0 auto;width:min(66%,calc((var(--vf-h) - 16px) * 16 / 9))}
+  .vf-cap{flex:1;min-width:0;flex-direction:column;flex-wrap:nowrap;gap:10px;padding:0}
+  .vf-name{font-size:clamp(18px,2.6vw,24px)}
+  .vf-act{flex-direction:column;align-items:flex-start;gap:4px}
+  .vf-film,.vf-ytc{min-height:38px}
+  .vf-film{padding:0 14px}
+  .vf-yt{display:none}
+}
+.vf-fs{flex:0 0 auto;width:44px;height:44px;display:grid;place-items:center;touch-action:manipulation}
+.vf-fs svg{width:20px;height:20px}
+/* full screen: the real one (desktop, Android, iPad) and the iPhone stand-in (.is-full) */
+.vf-frame:fullscreen{aspect-ratio:auto;width:100%;height:100%}
+.vf-frame:-webkit-full-screen{aspect-ratio:auto;width:100%;height:100%}
+.vf-frame.is-full{position:fixed;inset:0;z-index:3000;width:auto;aspect-ratio:auto}
+.vf-frame.is-full .vf-thumb{object-fit:contain}
+body.vf-full{overflow:hidden}
+body.vf-full header,body.vf-full>.rail{visibility:hidden}
 @media (max-width:620px){.vf-cap{padding:12px var(--pad) 0}.vf-yt{display:none}}
 @media (prefers-reduced-motion:reduce){.vf-mount{transition:none}.vf-tick{animation-duration:.01s}}

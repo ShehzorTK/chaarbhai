@@ -1,12 +1,12 @@
-/* Work page, Videos view: a full-screen vertical feed of YouTube films.
+/* Work page, Films view: a full-screen vertical feed of YouTube films.
    Data: window.VIDEOS (videos.js, built from drafts/videos/videos.json).
-   Nothing here touches the network until Videos is opened; the YouTube
+   Nothing here touches the network until Films is opened; the YouTube
    IFrame API is loaded once, on first open. Exposes window.VF. */
 (function(){
 'use strict';
 
 const AUTO_ADVANCE=true;              // when a video ends, scroll to the next slide
-const HASH='#/portfolio/videos';
+const HASH='#/portfolio/films';
 const SND_KEY='cb-vf-sound';
 
 const dbg=m=>{if(window.cbLog)window.cbLog(m)};
@@ -33,7 +33,7 @@ const I={
 const readSound=()=>{try{return sessionStorage.getItem(SND_KEY)==='1'}catch(e){return false}};
 const writeSound=on=>{try{sessionStorage.setItem(SND_KEY,on?'1':'0')}catch(e){}};
 
-/* keep --hh (the site header's height) current, for the toggle and the feed */
+/* keep --hh (the site header's height) current, for the feed */
 (function(){
   const h=document.getElementById('hdr');if(!h)return;
   let last=-1;                          // only write when it changes: a new value on <html> restyles the whole page
@@ -52,7 +52,7 @@ function warm(){
   loadYT().catch(()=>{});
 }
 document.addEventListener('pointerdown',e=>{
-  if(e.target.closest&&e.target.closest('a[href="#/portfolio/videos"]'))warm();
+  if(e.target.closest&&e.target.closest('a[href="'+HASH+'"]'))warm();
 },{passive:true});
 
 /* ---------- YouTube IFrame API, loaded once ---------- */
@@ -71,15 +71,15 @@ function loadYT(){
   return ytP;
 }
 
-/* ---------- the Photos | Videos toggle (used on the page and in the feed bar) ---------- */
+/* ---------- the Photos | Films switch. There is one, in the site header, on Work only (app.js puts it there) ---------- */
 function toggleHTML(active){
   const a=(v,href,label)=>`<a href="${href}"${active===v?' aria-current="true"':''}>${label}</a>`;
-  return `<div class="wk-tog" role="group" aria-label="Work view">${a('photos','#/portfolio','Photos')}${a('videos',HASH,'Videos')}</div>`;
+  return `<div class="wk-tog" role="group" aria-label="Work view">${a('photos','#/portfolio','Photos')}${a('videos',HASH,'Films')}</div>`;
 }
 
-/* the toggle under the heading is page markup; keep its highlight in step with the view */
+/* keep the switch's highlight in step with the view */
 function markToggle(view){
-  document.querySelectorAll('.wk-tog-row .wk-tog a').forEach(a=>{
+  document.querySelectorAll('.wk-tog a').forEach(a=>{
     if(a.getAttribute('href')===(view==='videos'?HASH:'#/portfolio'))a.setAttribute('aria-current','true');
     else a.removeAttribute('aria-current');
   });
@@ -153,10 +153,10 @@ function open(id){
 
   const root=document.createElement('div');
   root.id='vf';root.className='vf';
-  root.innerHTML=`<div class="vf-bar">${toggleHTML('videos')}<div class="vf-chips" role="group" aria-label="Jump to an event">${
+  root.innerHTML=`<div class="vf-bar"><div class="vf-chips" role="group" aria-label="Jump to an event">${
       window.VIDEOS.events.map((e,ei)=>{
         const first=data.findIndex(d=>d.ei===ei);
-        return first<0?'':`<button class="vf-chip" type="button" data-ei="${ei}" data-first="${first}" aria-label="Jump to ${esc(e.event)} videos">${esc(e.event)}</button>`;
+        return first<0?'':`<button class="vf-chip" type="button" data-ei="${ei}" data-first="${first}" aria-label="Jump to ${esc(e.event)} films">${esc(e.event)}</button>`;
       }).join('')}</div></div>
     <div class="vf-feed">${data.map(slideHTML).join('')}</div>
     <p class="vf-sr" role="status" aria-live="polite"></p>`;
@@ -189,6 +189,7 @@ function open(id){
     const e=es[es.length-1];
     S.inView=e.intersectionRatio>=0.5;
     document.body.classList.toggle('vf-in',S.inView);
+    if(S.inView){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}   // the header (and its Photos | Films switch) stays while the feed is on screen
     syncAway();
   },{threshold:[0,0.5]});
   S.vio.observe(root);
@@ -197,7 +198,7 @@ function open(id){
 
   if(startAt>0)S.feed.scrollTo({top:S.slides[startAt].offsetTop,behavior:'instant'});
   activate(startAt);
-  alignFeed(!found);      // a link to one video lands on it at once; the Videos button slides down to the feed
+  alignFeed(!found);      // a link to one video lands on it at once; the Films button slides down to the feed
 }
 
 /* put the feed's top edge just under the site header, so it fills the screen */

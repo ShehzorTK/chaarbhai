@@ -218,11 +218,34 @@ P['/']=()=>`
   <div class="rv" data-d="2" style="margin-top:38px"><a href="#/contact" data-nav class="btn"><span>Check your date</span><i></i></a></div>
 </section>`;
 
+/* One couple's row on Work. Rows are built a few at a time (see buildRows), not all at once. */
+const seqHTML=(c,q)=>`
+  <div class="seq" data-label="${esc([q.couple,...q.tags].join(' · '))}">
+    <div class="seq-head">
+      <div>
+        <h3 class="seq-title rv">${q.couple}</h3>
+        <ul class="seq-tags rv" data-d="1"><li class="tag-ch">${c.name}</li>${q.tags.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+      </div>
+      <div class="seq-ctrl rv" data-d="1">
+        <span class="seq-count">01 / ${String(q.frames.length).padStart(2,'0')}</span>
+        <button class="sq-prev" aria-label="Previous frame" disabled>${ARROW('l')}</button>
+        <button class="sq-next" aria-label="Next frame">${ARROW('r')}</button>
+      </div>
+    </div>
+    <div class="seq-strip rv">
+      ${q.frames.map((f,j)=>`
+        <figure class="frame${f.ar>1?' wide':''}" style="--ar:${f.ar}">
+          <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,f.ar>1?'(max-width: 600px) 88vw, 620px':'(max-width: 600px) 60vw, 310px',{parked:true})}</div>
+          <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${f.cap}</span></figcaption>
+        </figure>`).join('')}
+    </div>
+    <div class="seq-bar"><i></i></div>
+</div>`;
+
 P['/portfolio']=()=>`
 <section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(28px,4vw,48px)">
   <h1 class="d1 rv" data-d="1">The archive</h1>
   <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened. Look through the photos, one couple to a row (tap any photo to see it bigger), or watch the films, grouped by event.</p>
-  <div class="wk-tog-row rv" data-d="3">${VF.toggleHTML('photos')}</div>
 </section>
 
 <div id="wk-videos" hidden></div>
@@ -245,7 +268,7 @@ P['/portfolio']=()=>`
   ${CHAPTERS.map(c=>`<button data-jump="ch-${c.id}"><span class="lb">${c.short}</span><span class="dt"></span></button>`).join('')}
 </div>
 
-${CHAPTERS.map(c=>`
+${CHAPTERS.map((c,ci)=>`
 <section class="chapter" id="ch-${c.id}" style="padding-bottom:clamp(36px,4.6vw,74px)">
   <div class="ch-head">
     <div class="ch-no">${c.no}</div>
@@ -255,30 +278,7 @@ ${CHAPTERS.map(c=>`
       <p class="ch-desc rv" data-d="2">${c.desc}</p>
     </div>
   </div>
-  <div class="ch-body">
-  ${c.seqs.map(q=>`
-  <div class="seq" data-label="${esc([q.couple,...q.tags].join(' · '))}">
-    <div class="seq-head">
-      <div>
-        <h3 class="seq-title rv">${q.couple}</h3>
-        <ul class="seq-tags rv" data-d="1"><li class="tag-ch">${c.name}</li>${q.tags.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
-      </div>
-      <div class="seq-ctrl rv" data-d="1">
-        <span class="seq-count">01 / ${String(q.frames.length).padStart(2,'0')}</span>
-        <button class="sq-prev" aria-label="Previous frame">${ARROW('l')}</button>
-        <button class="sq-next" aria-label="Next frame">${ARROW('r')}</button>
-      </div>
-    </div>
-    <div class="seq-strip rv">
-      ${q.frames.map((f,j)=>`
-        <figure class="frame${f.ar>1?' wide':''}" style="--ar:${f.ar}">
-          <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,f.ar>1?'(max-width: 600px) 88vw, 620px':'(max-width: 600px) 60vw, 310px',{parked:true})}</div>
-          <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${f.cap}</span></figcaption>
-        </figure>`).join('')}
-    </div>
-    <div class="seq-bar"><i></i></div>
-  </div>`).join('')}
-  </div>
+  <div class="ch-body" data-ci="${ci}"></div>
 </section>`).join('')}
 
 <div class="rail-space"></div>
@@ -800,15 +800,16 @@ function observe(){
   if(io)io.disconnect();
   io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const t=e.target;io.unobserve(t);preGone.then(()=>reveal(t))}}),
     {threshold:.11,rootMargin:'0px 0px -5% 0px'});
-  document.querySelectorAll('.rv,.rv-img,.rv-l,.hero-arch').forEach(el=>io.observe(el));
+  observeRv(document);
 }
+function observeRv(root){root.querySelectorAll('.rv,.rv-img,.rv-l,.hero-arch').forEach(el=>io.observe(el))}
 /* Mouse drag for the photo strips (touch already scrolls natively).
    The strip follows the pointer 1:1. On release, velocity over the last 100ms
    is projected forward with Apple's normal scroll deceleration (0.998/ms),
    limited to two frames either way, and the strip glides to the nearest frame. */
-function dragScroll(){
+function dragScroll(strips){
   const DECEL=0.998, project=v=>v*DECEL/(1-DECEL);
-  document.querySelectorAll('.seq-strip').forEach(t=>{
+  strips.forEach(t=>{
     const frames=[...t.querySelectorAll('.frame')]; if(!frames.length)return;
     let down=false,sx=0,sl=0,samples=[],settle=null;
     const release=()=>{clearTimeout(settle);settle=null;t.classList.remove('drag')};
@@ -930,9 +931,8 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closes
 document.addEventListener('dragstart',e=>{if(e.target.tagName==='IMG')e.preventDefault()});
 let seqUpdaters=[];
 addEventListener('resize',()=>seqUpdaters.forEach(f=>f()),{passive:true});
-function sequences(){
-  seqUpdaters=[];
-  document.querySelectorAll('.seq').forEach(seq=>{
+function sequences(seqs){
+  seqs.forEach(seq=>{
     const strip=seq.querySelector('.seq-strip'),cnt=seq.querySelector('.seq-count'),
           bar=seq.querySelector('.seq-bar i'),prev=seq.querySelector('.sq-prev'),
           next=seq.querySelector('.sq-next'),frames=[...strip.querySelectorAll('.frame')],
@@ -949,7 +949,7 @@ function sequences(){
     strip.addEventListener('scroll',upd,{passive:true});
     prev.addEventListener('click',()=>strip.scrollBy({left:-step(),behavior:reduceMotion()?'auto':'smooth'}));
     next.addEventListener('click',()=>strip.scrollBy({left:step(),behavior:reduceMotion()?'auto':'smooth'}));
-    seqUpdaters.push(upd); upd();
+    seqUpdaters.push(upd); strip._upd=upd;        // run when the row goes live (warmRow), not now: reading 126 strips' sizes is slow
   });
 }
 /* The Work page holds ~1,000 photos in ~130 sideways strips. iPhone Safari gives every scrollable strip its own
@@ -970,6 +970,7 @@ function park(im){im.removeAttribute('srcset');im.src=TINY;im.dataset.on='0'}
 function warmRow(seq){
   const strip=seq.querySelector('.seq-strip');if(!strip||stripIO.has(strip))return;
   strip.classList.remove('cold');
+  if(strip._upd)strip._upd();
   const io=new IntersectionObserver(es=>es.forEach(e=>{
     const im=e.target,on=im.dataset.on==='1';
     if(e.isIntersecting&&!on)hydrate(im);else if(!e.isIntersecting&&on)park(im);
@@ -986,13 +987,48 @@ function coolRow(seq){
 function photoWindow(){
   if(rowIO){rowIO.disconnect();rowIO=null}
   stripIO.forEach(io=>io.disconnect());stripIO.clear();
-  const rows=[...document.querySelectorAll('.seq')];if(!rows.length)return;
-  rows.forEach(r=>{const s=r.querySelector('.seq-strip');if(s)s.classList.add('cold')});
+  if(!document.querySelector('#wk-photos'))return;
   rowIO=new IntersectionObserver(es=>{
     es.forEach(e=>e.isIntersecting?warmRow(e.target):coolRow(e.target));
     if(window.cbLog)cbLog('rows live '+stripIO.size+', pictures '+document.querySelectorAll('.fr-img img[data-on="1"]').length);
   },{rootMargin:'100% 0px'});
-  rows.forEach(r=>rowIO.observe(r));
+}
+/* Work opens at once: the page arrives with the heading, the chapter list and empty chapters, the first rows are
+   built straight away, and the rest follow in small batches in the background (a few ms at a time, so scrolling
+   stays smooth). Laying out all ~130 rows before the first paint took well over a second on a phone.
+   Jumping to a chapter builds everything up to it first, so nothing above the landing spot moves. */
+const FIRST_ROWS=3,BATCH_MS=6;
+let rowJob=null,rowGen=0;
+function addRows(ci,n){
+  const c=CHAPTERS[ci],body=document.querySelector(`.ch-body[data-ci="${ci}"]`);if(!body)return 0;
+  const from=+(body.dataset.n||0),to=Math.min(c.seqs.length,from+n);if(from>=to)return 0;
+  body.insertAdjacentHTML('beforeend',c.seqs.slice(from,to).map(q=>seqHTML(c,q)).join(''));
+  body.dataset.n=to;
+  const rows=[...body.children].slice(from);
+  rows.forEach(r=>{r.querySelector('.seq-strip').classList.add('cold');observeRv(r);if(rowIO)rowIO.observe(r)});
+  dragScroll(rows.map(r=>r.querySelector('.seq-strip')));sequences(rows);
+  return to-from;
+}
+function rowsLeft(ci){return CHAPTERS[ci].seqs.length-(+(document.querySelector(`.ch-body[data-ci="${ci}"]`)||{dataset:{}}).dataset.n||0)}
+function buildRows(){
+  if(rowJob){clearTimeout(rowJob);rowJob=null}
+  const gen=++rowGen;seqUpdaters=[];
+  if(!document.querySelector('#wk-photos .ch-body'))return;
+  let ci=0,made=0;
+  while(ci<CHAPTERS.length&&made<FIRST_ROWS){made+=addRows(ci,FIRST_ROWS-made);if(!rowsLeft(ci))ci++}
+  const pump=()=>{
+    rowJob=null;if(gen!==rowGen||!document.querySelector('#wk-photos .ch-body'))return;
+    const t0=performance.now();
+    while(ci<CHAPTERS.length&&performance.now()-t0<BATCH_MS){addRows(ci,2);if(!rowsLeft(ci))ci++}
+    if(ci<CHAPTERS.length)rowJob=setTimeout(pump,24);
+    else if(window.cbLog)cbLog('rows all built');
+  };
+  preGone.then(()=>{if(gen===rowGen)rowJob=setTimeout(pump,400)});   // after the page has slid in
+}
+/* before scrolling to a chapter: build it and everything above it */
+function rowsUpTo(id){
+  const k=CHAPTERS.findIndex(c=>'ch-'+c.id===id);
+  for(let i=0;i<=k;i++)while(rowsLeft(i))addRows(i,50);
 }
 let railScroll=null;
 function chapterRail(){
@@ -1637,9 +1673,13 @@ function render(path){
   const gp=GA_PATH[path]||'/';
   track('page_view',{page_title:document.title,page_location:location.origin+gp,page_path:gp});
   scrollTo({top:0,behavior:'instant'});
-  const then=jumpAfter&&document.getElementById(jumpAfter);jumpAfter=null;
+  const sub=document.getElementById('hdrsub');
+  if(path==='/portfolio'){sub.innerHTML=VF.toggleHTML('photos');sub.hidden=false}else{sub.hidden=true;sub.textContent=''}
+  document.getElementById('hdr').classList.remove('hide');
+  observe();photoWindow();buildRows();
+  const then=jumpAfter&&document.getElementById(jumpAfter);if(then)rowsUpTo(jumpAfter);jumpAfter=null;
   if(then)then.scrollIntoView({behavior:'instant',block:'start'});
-  observe();dragScroll();sequences();photoWindow();chapterRail();letterForm();pricing();reel();
+  chapterRail();letterForm();pricing();reel();
   paintLogos();labelFills();
   if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
@@ -1653,6 +1693,52 @@ function render(path){
    afterTransition resolves once #main's opacity transition genuinely finishes
    (falling back to a timeout only if transitionend never fires, e.g. a
    backgrounded tab) instead of a guessed setTimeout. */
+/* Work's own loading screen: the same logo build as the first visit, with a line of copy under it that changes
+   while the first screen of photos comes in. Shown each time Work is opened from another page (not on the very first
+   visit, which already has the preloader). It stays only until the chapter covers and the photos in the first rows
+   have loaded (never more than 6s), so with the files cached it is barely seen. A new line every 1.8s while it waits. */
+const WK_LINES=['Nearly a thousand photos in here. Give us a second.','These are full quality files, not thumbnails.',
+  'Pulling up every couple, from the first portrait to the goodbye.','Almost there. Worth the wait, promise.'];
+let preDone=false;preGone.then(()=>{preDone=true});
+const wkLoader=(()=>{
+  let el=null,fill,track,msg,rot=0,job=0;
+  const make=()=>{
+    el=document.createElement('div');el.id='wkpre';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+    el.innerHTML=`<div class="wrap"><div class="logo-build"><img class="ghost" src="${LOGO}" alt=""><img class="fill" src="${LOGO}" alt=""></div>
+      <div class="track"><i></i></div><p class="wk-msg"></p></div>`;
+    document.body.appendChild(el);
+    fill=el.querySelector('.fill');track=el.querySelector('.track i');msg=el.querySelector('.wk-msg');
+  };
+  const paint=p=>{fill.style.clipPath=`inset(${(1-p)*100}% 0 0 0)`;track.style.transform=`scaleX(${p})`};
+  const say=i=>{msg.classList.add('out');setTimeout(()=>{msg.textContent=WK_LINES[i%WK_LINES.length];msg.classList.remove('out')},reduceMotion()?0:250)};
+  return {
+    start(){
+      if(!preDone)return false;
+      if(!el)make();
+      const my=++job;clearInterval(rot);paint(0);msg.textContent=WK_LINES[0];msg.classList.remove('out');
+      el.classList.add('on');
+      let i=0;rot=setInterval(()=>{if(my===job)say(++i)},1800);
+      return true;
+    },
+    stop(){if(el&&el.classList.contains('on')){job++;clearInterval(rot);el.classList.remove('on')}},
+    /* call after Work has rendered: waits two frames so the first rows have been handed their photos */
+    wait(){
+      if(!el||!el.classList.contains('on'))return;
+      const my=job;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        if(my!==job)return;
+        const ims=[...document.querySelectorAll('.irow .thumb img, #wk-photos .fr-img img[data-on="1"], .vf-slide.is-active .vf-thumb[src]')];
+        let done=0;const total=Math.max(1,ims.length);
+        const finish=()=>{if(my!==job)return;job++;
+          clearInterval(rot);paint(1);setTimeout(()=>el.classList.remove('on'),120)};
+        const one=()=>{done++;paint(Math.min(1,done/total));if(done>=total)finish()};
+        if(!ims.length){finish();return}
+        ims.forEach(im=>{if(im.complete&&im.naturalWidth>1)one();else{im.addEventListener('load',one,{once:true});im.addEventListener('error',one,{once:true})}});
+        setTimeout(()=>{if(my===job)finish()},6000);
+      }));
+    }
+  };
+})();
 const ORDER=['/','/portfolio','/about','/services','/testimonials','/contact'];
 let routing=false,pendingPath=null,currentPath=null,hidden=false,wake=null;
 function afterTransition(el,fallbackMs){
@@ -1674,6 +1760,7 @@ async function go(){
   while(pendingPath!==currentPath){
     const target=pendingPath;
     const goingRight=ORDER.indexOf(target)>=ORDER.indexOf(currentPath);
+    if(target==='/portfolio'&&currentPath!==null)wkLoader.start();else wkLoader.stop();
     if(currentPath!==null&&!hidden){
       main.classList.add(goingRight?'leave-l':'leave-r');
       document.querySelectorAll('body>.rail').forEach(r=>r.classList.add('out'));
@@ -1686,6 +1773,7 @@ async function go(){
     const navigated=currentPath!==null;
     render(target);
     currentPath=target;
+    if(target==='/portfolio')wkLoader.wait();
     if(navigated){                              // after an in-site link, put focus on the new page's heading
       const h=main.querySelector('h1'); if(h){h.tabIndex=-1;h.focus({preventScroll:true})}
     }
@@ -1704,23 +1792,24 @@ async function go(){
   }
   routing=false;
 }
-/* Work has two views on one page: #/portfolio (Photos) and #/portfolio/videos[/ID] (Videos).
+/* Work has two views on one page: #/portfolio (Photos) and #/portfolio/films[/ID] (Films).
+   Old #/portfolio/videos links still work: they are rewritten to films.
    routeOf gives the page a hash belongs to, so switching view doesn't redraw or animate the page. */
 function routeOf(h){const p=(h||'#/').slice(1);return p==='/portfolio'||p.indexOf('/portfolio/')===0?'/portfolio':p}
 function workSync(){
-  const m=/^\/portfolio\/videos(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
+  const m=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
   if(!m){VF.close({focus:true});return}
   preGone.then(()=>{                              // not behind the loading screen
-    const m2=/^\/portfolio\/videos(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
+    const m2=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
     if(m2)VF.open(m2[1]);
   });
 }
-/* a link like ?view=videos&v=ID opens the same place */
+/* a link like ?view=films&v=ID (or the older ?view=videos) opens the same place */
 (function(){
   const q=new URLSearchParams(location.search);
-  if(q.get('view')!=='videos'||routeOf(location.hash)==='/portfolio')return;
+  if(!/^(films|videos)$/.test(q.get('view')||'')||routeOf(location.hash)==='/portfolio')return;
   const v=q.get('v');q.delete('view');q.delete('v');const rest=q.toString();
-  try{history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+'#/portfolio/videos'+(v&&/^[\w-]{6,20}$/.test(v)?'/'+v:''))}catch(e){}
+  try{history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+'#/portfolio/films'+(v&&/^[\w-]{6,20}$/.test(v)?'/'+v:''))}catch(e){}
 })();
 addEventListener('hashchange',go);
 addEventListener('hashchange',()=>{
@@ -1729,7 +1818,7 @@ addEventListener('hashchange',()=>{
 });
 document.addEventListener('click',e=>{
   const j=e.target.closest('[data-jump]');
-  if(j){const t=document.getElementById(j.dataset.jump);
+  if(j){const t=document.getElementById(j.dataset.jump);if(t)rowsUpTo(j.dataset.jump);
     if(t)t.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'});return}
   const nt=e.target.closest('[data-nav-to]');
   if(nt){jumpAfter=nt.dataset.then||null;location.hash=nt.dataset.navTo;return}

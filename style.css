@@ -74,7 +74,7 @@
 /* The frame of the site stays night-navy in either theme: the header, the
    footer and the loading screen, so the beige mark always sits on dark.
    The home photograph keeps its night palette too. */
-header,footer,#pre{--ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
+header,footer,#pre,#wkpre{--ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
   --soft:rgba(239,234,223,.54);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
   --line-2:rgba(239,234,223,.22);--gline:rgba(206,192,163,.34);--hdr:rgba(18,20,28,.94);color:var(--paper)}
 footer{background:var(--ink)}
@@ -109,14 +109,23 @@ p{text-wrap:pretty}
   display:grid;place-items:center;transition:opacity .4s var(--ease),visibility .4s}
 #pre.gone{opacity:0;visibility:hidden}
 html.seen #pre{display:none}
-#pre .wrap{display:grid;justify-items:center;gap:30px;padding:20px}
+#pre .wrap,#wkpre .wrap{display:grid;justify-items:center;gap:30px;padding:20px}
 /* the logo builds upward as the site loads */
 .logo-build{position:relative;width:clamp(210px,30vw,430px);line-height:0}
 .logo-build img{display:block;width:100%;height:auto}
 .logo-build .ghost{opacity:.12}
 .logo-build .fill{position:absolute;left:0;top:0;clip-path:inset(100% 0 0 0)}
-#pre .track{width:min(210px,54vw);height:1px;background:var(--line);position:relative;overflow:hidden}
-#pre .track i{position:absolute;inset:0;background:var(--gold);transform-origin:left;transform:scaleX(0)}
+#pre .track,#wkpre .track{width:min(210px,54vw);height:1px;background:var(--line);position:relative;overflow:hidden}
+#pre .track i,#wkpre .track i{position:absolute;inset:0;background:var(--gold);transform-origin:left;transform:scaleX(0)}
+
+/* Work's loading screen (wkLoader in app.js): the preloader's look, plus a changing line of copy */
+#wkpre{position:fixed;inset:0;z-index:10000;background:var(--ink);display:grid;place-items:center;
+  opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s}
+#wkpre.on{opacity:1;visibility:visible;transition-duration:.15s}
+#wkpre .wk-msg{max-width:30ch;min-height:3.2em;margin-top:-6px;text-align:center;color:var(--dim);
+  font-size:var(--t-small);line-height:1.6;transition:opacity .25s ease}
+#wkpre .wk-msg.out{opacity:0}
+@media (prefers-reduced-motion:reduce){#wkpre .wk-msg{transition:none}}
 
 /* ============ HEADER ============ */
 header{position:fixed;top:0;left:0;right:0;z-index:900;padding:20px var(--pad);
@@ -864,7 +873,14 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 /* Work strips that are far from the screen: not scrollable (so no scroll layer), no pictures. See photoWindow(). */
 .seq-strip.cold{overflow:hidden}
 
-/* ============ WORK: PHOTOS | VIDEOS ============
+/* The Photos | Films switch lives in the header on Work (a second row under the logo), so it hides and comes back
+   with the header. flex-wrap puts it on its own line. Hidden while the mobile menu is open. */
+header{flex-wrap:wrap}
+.hdr-sub{flex:0 0 100%;margin-top:12px;position:relative;z-index:1}
+.hdr-sub[hidden],body.locked .hdr-sub{display:none}
+.hdr-sub .wk-tog a{min-height:32px;padding:0 16px}
+
+/* ============ WORK: PHOTOS | FILMS ============
    The toggle sits under the Work heading and description. Below it the page shows
    either the photo chapters (#wk-photos) or the video feed (#wk-videos). The feed is
    one block, as tall as the screen under the header. */

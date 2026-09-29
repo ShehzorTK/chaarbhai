@@ -9,6 +9,7 @@ const AUTO_ADVANCE=true;              // when a video ends, scroll to the next s
 const HASH='#/portfolio/videos';
 const SND_KEY='cb-vf-sound';
 
+const dbg=m=>{if(window.cbLog)window.cbLog(m)};
 const $=(s,r=document)=>r.querySelector(s);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -191,6 +192,7 @@ function open(id){
   },{threshold:[0,0.5]});
   S.vio.observe(root);
   S.poll=setInterval(tick,250);
+  dbg('vf open, '+data.length+' slides, phone='+PHONE);
 
   if(startAt>0)S.feed.scrollTo({top:S.slides[startAt].offsetTop,behavior:'instant'});
   activate(startAt);
@@ -239,6 +241,7 @@ function mount(k){
   if(S.players.has(k))return S.players.get(k);
   const d=S.data[k],holder=$('.vf-mount',S.slides[k]),div=document.createElement('div');
   holder.textContent='';holder.appendChild(div);
+  dbg('vf mount '+k+' (players '+(S.players.size+1)+')');
   const r={k,vid:curId(d),ready:false,want:false,user:false,paused:false,resume:false,state:-2,yt:null,dead:false,guard:0};
   S.players.set(k,r);
   const st=S;
@@ -258,7 +261,7 @@ function kill(r){
 }
 function destroy(k,keepMode){
   const r=S.players.get(k); if(!r)return;
-  kill(r); S.players.delete(k);
+  kill(r); S.players.delete(k);dbg('vf destroy '+k);
   const el=S.slides[k],fr=$('.vf-frame',el);
   $('.vf-mount',el).textContent='';
   fr.classList.remove('is-ready','is-playing','is-error');
@@ -282,6 +285,7 @@ function $$(s,r){return [...r.querySelectorAll(s)]}
 
 function onReady(r){
   if(r.dead||!S)return;
+  dbg('vf ready '+r.k);
   r.ready=true;
   frameOf(r.k).classList.add('is-ready');
   if(S.active===r.k&&r.want){ if(S.away)r.resume=true; else startPlay(r); }
@@ -377,6 +381,7 @@ function activate(i){
   if(S.target===i)S.target=null;      // arrived; a manual scroll clears it too (below)
   if(i===S.active)return;
   const prevEv=S.lastEv,d=S.data[i];
+  dbg('vf active '+i+' '+curId(d));
   S.active=i;
   S.players.forEach((r,k)=>{if(k!==i)pause(r)});
   syncWindow();loadThumbs();

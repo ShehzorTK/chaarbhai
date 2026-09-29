@@ -962,11 +962,12 @@ function lightenPhotos(){
     im.dataset.ss=im.getAttribute('srcset')||'';im.dataset.u=im.getAttribute('src');
     im.removeAttribute('srcset');im.removeAttribute('sizes');im.removeAttribute('loading');im.src=TINY;im.dataset.on='0';
   });
-  lightIO=new IntersectionObserver(es=>es.forEach(e=>{
+  let hy=0,de=0;
+  lightIO=new IntersectionObserver(es=>{es.forEach(e=>{
     const im=e.target,on=im.dataset.on==='1';
-    if(e.isIntersecting&&!on){im.src=im.dataset.u;im.dataset.on='1'}
-    else if(!e.isIntersecting&&on){im.src=TINY;im.dataset.on='0'}
-  }),{rootMargin:'500px 350px'});
+    if(e.isIntersecting&&!on){im.src=im.dataset.u;im.dataset.on='1';hy++}
+    else if(!e.isIntersecting&&on){im.src=TINY;im.dataset.on='0';de++}
+  });if(window.cbLog)cbLog('photos hydrated '+hy+' parked '+de)},{rootMargin:'500px 350px'});
   imgs.forEach(im=>lightIO.observe(im));
 }
 let railScroll=null;
@@ -1597,6 +1598,7 @@ const TITLES={'/':'Chaar Bhai · Wedding Photography and Film','/portfolio':'Wor
 /* a chapter picked on Home: Work opens scrolled to it (set by data-then) */
 let jumpAfter=null;
 function render(path){
+  if(window.cbLog)cbLog('render '+path);
   VF.close();
   document.querySelectorAll('body>.rail').forEach(r=>r.remove());
   page.innerHTML=(P[path]||P['/'])();

@@ -851,3 +851,95 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
   nav.links{clip-path:none;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   nav.links.open{clip-path:none;opacity:1;visibility:visible;transition:opacity .2s,visibility .2s}
 }
+
+/* ============ WORK: PHOTOS | VIDEOS ============
+   The toggle sits in the gap above the Work heading (so Photos doesn't move).
+   The video feed is a fixed layer on <body>, under the header, over the page. */
+.wk-tog-pos{position:absolute;top:calc(var(--hh,84px) + 10px);left:var(--pad);z-index:5}
+.wk-tog{display:inline-flex;padding:2px;border:1px solid var(--line-2);border-radius:var(--arch);background:var(--ink-2)}
+.wk-tog a{display:inline-flex;align-items:center;min-height:34px;padding:0 18px;border-radius:var(--arch);
+  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);
+  transition:color .2s var(--ease),background .2s var(--ease)}
+.wk-tog a[aria-current]{background:var(--gold-wash);color:var(--gold);box-shadow:inset 0 0 0 1px var(--gline)}
+@media (hover:hover){.wk-tog a:not([aria-current]):hover{color:var(--paper)}}
+
+body.vf-on{overflow:hidden}
+body.vf-on>.rail{display:none}
+body.vf-on header::before{opacity:1}
+
+.vf{--vfb:56px;--vf-cap:128px;--vf-h:calc(100svh - var(--hh,84px) - var(--vfb));
+  position:fixed;left:0;right:0;bottom:0;top:var(--hh,84px);z-index:800;background:var(--ink);color:var(--paper)}
+.vf-bar{position:absolute;top:0;left:0;right:0;height:var(--vfb);display:flex;align-items:center;gap:14px;
+  padding:0 var(--pad);border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
+.vf-bar .wk-tog{flex:0 0 auto}
+.vf-chips{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+  overscroll-behavior-x:contain;padding:2px 0}
+.vf-chips::-webkit-scrollbar{display:none}
+.vf-chip{flex:0 0 auto;min-height:36px;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--arch);
+  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  color:var(--soft);touch-action:manipulation;transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease)}
+.vf-chip.on{color:var(--gold);border-color:var(--gline);background:var(--gold-wash)}
+@media (hover:hover){.vf-chip:not(.on):hover{color:var(--paper);border-color:var(--gline)}}
+
+.vf-feed{position:absolute;left:0;right:0;top:var(--vfb);bottom:0;overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.vf-feed::-webkit-scrollbar{display:none}
+.vf-slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.vf-wrap{width:min(100%,calc((var(--vf-h) - var(--vf-cap)) * 16 / 9))}
+.vf-frame{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+.vf-thumb{position:absolute;inset:0}
+.vf-mount{position:absolute;inset:0;opacity:0;transition:opacity .25s}
+.vf-frame.is-ready .vf-mount{opacity:1}
+.vf-mount iframe{display:block;width:100%;height:100%;border:0}
+.vf-play,.vf-tick{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;display:grid;place-items:center;
+  border-radius:50%;background:rgba(18,20,28,.6);color:#fff;border:1px solid rgba(255,255,255,.4);pointer-events:none;z-index:1}
+.vf-play svg,.vf-tick svg{width:28px;height:28px}
+.vf-frame.is-playing .vf-play,.vf-frame.is-error .vf-play{display:none}
+.vf-tick{z-index:3;animation:vfTick .65s var(--ease) both}
+@keyframes vfTick{0%{opacity:0;transform:scale(.8)}25%{opacity:1;transform:none}100%{opacity:0;transform:scale(1.15)}}
+.vf-hit{position:absolute;inset:0;z-index:2;background:transparent;cursor:pointer;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.vf-hit:focus-visible{outline:2px solid var(--gold-hi);outline-offset:-4px}
+.vf-err{position:absolute;inset:0;z-index:4;display:grid;place-content:center;gap:6px;text-align:center;padding:16px;
+  background:rgba(18,20,28,.82);color:#fff;font-size:var(--t-small)}
+.vf-err[hidden]{display:none}
+.vf-err a{color:var(--gold-hi);text-decoration:underline;text-underline-offset:3px}
+.vf-sound{position:absolute;z-index:4;top:12px;right:12px;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 12px;
+  border:1px solid var(--gline);border-radius:99px;background:rgba(18,20,28,.72);color:var(--gold-hi);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;touch-action:manipulation}
+.vf-sound[hidden]{display:none}
+.vf-sound svg{width:18px;height:18px}
+.vf-flash{position:absolute;z-index:3;left:18px;top:14px;pointer-events:none;color:#fff;
+  font-family:var(--f-display);font-size:var(--t-headline-s);line-height:1.06;letter-spacing:-.015em;
+  text-shadow:0 2px 24px rgba(0,0,0,.7);animation:vfFlash 1.5s ease both}
+@keyframes vfFlash{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+.vf-ctl{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:6px;padding:20px 8px 4px;
+  background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;transition:opacity .2s}
+@media (hover:hover){
+  .vf-ctl{opacity:0}
+  .vf-frame:hover .vf-ctl,.vf-frame:focus-within .vf-ctl,.vf-frame:not(.is-playing) .vf-ctl{opacity:1}
+}
+.vf-mute{flex:0 0 auto;width:44px;height:44px;display:grid;place-items:center;touch-action:manipulation}
+.vf-mute svg{width:22px;height:22px}
+.vf-seek{position:relative;flex:1;height:44px;touch-action:manipulation}
+.vf-seek::before{content:'';position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:rgba(255,255,255,.3)}
+.vf-seek i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;width:var(--p,0%);background:var(--gold-hi)}
+.vf-yt{flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-size:var(--t-label);font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase}
+.vf-ctl :focus-visible,.vf-sound:focus-visible{outline:2px solid var(--gold-hi);outline-offset:-2px}
+.vf-cap{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px 24px;padding:14px 16px 0}
+.vf-name{font-family:var(--f-serif);font-weight:400;font-size:var(--t-title);line-height:1.2;letter-spacing:-.01em}
+.vf-meta{margin-top:6px;color:var(--soft)}
+.vf-act{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.vf-film{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:1px solid var(--gold);border-radius:var(--arch);
+  color:var(--gold);font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;touch-action:manipulation;
+  transition:background .2s var(--ease)}
+@media (hover:hover){.vf-film:hover{background:var(--gold-wash)}}
+.vf-ytc{display:inline-flex;align-items:center;min-height:44px;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--line-2)}
+@media (hover:hover){.vf-ytc:hover{color:var(--paper)}}
+.vf-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-height:520px){.vf{--vf-cap:76px}.vf-meta{display:none}.vf-film,.vf-ytc{min-height:36px}}
+@media (max-width:620px){.vf-cap{padding:12px var(--pad) 0}.vf-yt{display:none}}
+@media (prefers-reduced-motion:reduce){.vf-mount{transition:none}.vf-tick{animation-duration:.01s}}

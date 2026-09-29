@@ -214,6 +214,7 @@ P['/']=()=>`
 </section>`;
 
 P['/portfolio']=()=>`
+<div class="wk-tog-pos">${VF.toggleHTML('photos')}</div>
 <section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(40px,6vw,70px)">
   <h1 class="d1 rv" data-d="1">The archive</h1>
   <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened: one couple to a row, from the first portrait to the goodbye at the end of the night. Tap any photo to see it bigger.</p>
@@ -1569,6 +1570,7 @@ const TITLES={'/':'Chaar Bhai · Wedding Photography and Film','/portfolio':'Wor
 /* a chapter picked on Home: Work opens scrolled to it (set by data-then) */
 let jumpAfter=null;
 function render(path){
+  VF.close();
   document.querySelectorAll('body>.rail').forEach(r=>r.remove());
   page.innerHTML=(P[path]||P['/'])();
   const rail=main.querySelector('.rail');
@@ -1586,6 +1588,7 @@ function render(path){
   if(then)then.scrollIntoView({behavior:'instant',block:'start'});
   observe();dragScroll();sequences();chapterRail();letterForm();pricing();reel();
   paintLogos();labelFills();
+  if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
     .forEach(reveal)));
 }
@@ -1612,7 +1615,7 @@ function afterTransition(el,fallbackMs){
    from wherever opacity is), and a click during a leave skips rendering the
    page that was abandoned: #main just stays hidden and moves on. */
 async function go(){
-  pendingPath=(location.hash||'#/').slice(1);
+  pendingPath=routeOf(location.hash);
   if(routing){if(wake)wake();return}
   routing=true;
   while(pendingPath!==currentPath){
@@ -1647,7 +1650,29 @@ async function go(){
   }
   routing=false;
 }
+/* Work has two views on one page: #/portfolio (Photos) and #/portfolio/videos[/ID] (Videos).
+   routeOf gives the page a hash belongs to, so switching view doesn't redraw or animate the page. */
+function routeOf(h){const p=(h||'#/').slice(1);return p==='/portfolio'||p.indexOf('/portfolio/')===0?'/portfolio':p}
+function workSync(){
+  const m=/^\/portfolio\/videos(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
+  if(!m){VF.close({focus:true});return}
+  preGone.then(()=>{                              // not behind the loading screen
+    const m2=/^\/portfolio\/videos(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
+    if(m2)VF.open(m2[1]);
+  });
+}
+/* a link like ?view=videos&v=ID opens the same place */
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('view')!=='videos'||routeOf(location.hash)==='/portfolio')return;
+  const v=q.get('v');q.delete('view');q.delete('v');const rest=q.toString();
+  try{history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+'#/portfolio/videos'+(v&&/^[\w-]{6,20}$/.test(v)?'/'+v:''))}catch(e){}
+})();
 addEventListener('hashchange',go);
+addEventListener('hashchange',()=>{
+  if(routeOf(location.hash)!=='/portfolio')VF.pauseAll();          // leaving Work: silence it now, the page swap follows
+  else if(currentPath==='/portfolio')workSync();
+});
 document.addEventListener('click',e=>{
   const j=e.target.closest('[data-jump]');
   if(j){const t=document.getElementById(j.dataset.jump);

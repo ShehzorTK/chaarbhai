@@ -15,7 +15,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const saveData=()=>!!(navigator.connection&&navigator.connection.saveData);
 /* Phones get YouTube's 480px still (its black bars are cropped off by object-fit:cover) instead of the 1280px one,
-   and a slide only fetches its still when it is within 2 of the one on screen. */
+   and a slide only fetches its still when it is next to the one on screen (within 2 on bigger screens). */
 const PHONE=matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coarse)').matches;
 const thumbUrl=id=>'https://i.ytimg.com/vi/'+id+(PHONE?'/hqdefault.jpg':'/maxresdefault.jpg');
 const thumbLo=id=>'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';
@@ -36,7 +36,8 @@ const writeSound=on=>{try{sessionStorage.setItem(SND_KEY,on?'1':'0')}catch(e){}}
 /* keep --hh (the site header's height) current, for the toggle and the feed */
 (function(){
   const h=document.getElementById('hdr');if(!h)return;
-  const set=()=>document.documentElement.style.setProperty('--hh',h.offsetHeight+'px');
+  let last=-1;                          // only write when it changes: a new value on <html> restyles the whole page
+  const set=()=>{const v=h.offsetHeight;if(v!==last){last=v;document.documentElement.style.setProperty('--hh',v+'px')}};
   set();addEventListener('resize',set);
   if(window.ResizeObserver)new ResizeObserver(set).observe(h);
 })();
@@ -340,12 +341,14 @@ function playActive(){
   if(S.away){r.resume=true;return}
   if(r.ready)startPlay(r);
 }
-/* Players live for the slide on screen and its neighbours (a phone keeps only the next one). The one on screen
-   is created first; the neighbours wait until it is playing (or 2.5s), so they don't slow its start. */
+/* Players live for the slide on screen and its neighbours. A phone keeps only the one on screen: each YouTube
+   player is a whole web page, and two of them on top of the site is too much for an iPhone. On bigger screens the
+   neighbours wait until the one on screen is playing (or 2.5s), so they don't slow its start. */
 function keepSet(a){
   const n=S.data.length,keep=[a];
+  if(PHONE)return keep;
   if(a+1<n)keep.push(a+1);
-  if(!PHONE&&a>0)keep.push(a-1);
+  if(a>0)keep.push(a-1);
   return keep;
 }
 function syncWindow(){
@@ -371,7 +374,7 @@ function mountNeighbours(){
 function loadThumbs(){
   const a=S.active;
   S.slides.forEach((el,k)=>{
-    if(Math.abs(k-a)>2)return;
+    if(Math.abs(k-a)>(PHONE?1:2))return;
     const im=$('.vf-thumb',el);
     if(!im.getAttribute('src'))im.src=thumbUrl(im.dataset.id);
   });

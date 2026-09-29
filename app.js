@@ -6,10 +6,15 @@ const T=['#191C26','#1D2030','#232735','#1B1E29','#202431','#262A38'];   /* imag
 /* One photo from PORTFOLIO or PICKS: web-sized WebP copies in site/photos.
    `sizes` says how wide it shows, so the browser fetches the smallest copy that
    stays sharp. Everything below the first screen loads lazily. */
-function pic(f,sizes,{alt=f.alt,eager=false,cls=''}={}){const a=T[0],b=T[2];
+/* `parked`: the Work strips. The tag carries no picture at all, only a 1px placeholder, with the real
+   copies kept in data-u / data-ss / data-sz. photoWindow() puts the picture in when its row nears the screen. */
+const TINY='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+function pic(f,sizes,{alt=f.alt,eager=false,cls='',parked=false}={}){const a=T[0],b=T[2];
  const set=f.ws.map(w=>`${f.src}-${w}.webp ${w}w`).join(', ');
- return `<img${cls?` class="${cls}"`:''} src="${f.src}-${f.ws[0]}.webp" srcset="${set}" sizes="${sizes}"
- width="${f.ws[0]}" height="${Math.round(f.ws[0]/f.ar)}" ${eager?'fetchpriority="high"':'loading="lazy"'} decoding="async"
+ const load=parked?`src="${TINY}" data-u="${f.src}-${f.ws[0]}.webp" data-ss="${set}" data-sz="${sizes}"`
+   :`src="${f.src}-${f.ws[0]}.webp" srcset="${set}" sizes="${sizes}" ${eager?'fetchpriority="high"':'loading="lazy"'}`;
+ return `<img${cls?` class="${cls}"`:''} ${load}
+ width="${f.ws[0]}" height="${Math.round(f.ws[0]/f.ar)}" decoding="async"
  draggable="false" alt="${esc(alt)}"${f.pos?` style="object-position:${f.pos}"`:''}
  onerror="this.style.display='none';(this.closest('.fr-img,.arch,.thumb,.pk-m,.cta-bg,.hero-arch')||this.parentNode).style.background='linear-gradient(150deg,${a},${b})'">`}
 
@@ -267,7 +272,7 @@ ${CHAPTERS.map(c=>`
     <div class="seq-strip rv">
       ${q.frames.map((f,j)=>`
         <figure class="frame${f.ar>1?' wide':''}" style="--ar:${f.ar}">
-          <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,f.ar>1?'(max-width: 600px) 88vw, 620px':'(max-width: 600px) 60vw, 310px')}</div>
+          <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,f.ar>1?'(max-width: 600px) 88vw, 620px':'(max-width: 600px) 60vw, 310px',{parked:true})}</div>
           <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${f.cap}</span></figcaption>
         </figure>`).join('')}
     </div>
@@ -868,7 +873,7 @@ function lightbox(frame){
       const L=LB.list; LB.i=i=Math.max(0,Math.min(L.length-1,i));
       const src=L[i].querySelector('.fr-img img');
       img.classList.add('swap');
-      const ss=src.dataset.ss||src.srcset,su=src.dataset.u||src.src;   // phones park the full-size set in data-*, see lightenPhotos
+      const ss=src.dataset.ss||src.srcset,su=src.dataset.u||src.src;   // Work frames keep the full set in data-*, see photoWindow
       const nxt=new Image(); nxt.sizes='94vw'; nxt.srcset=ss;
       const put=()=>{img.sizes='94vw';img.srcset=ss;img.src=su;img.alt=src.alt;img.classList.remove('swap')};
       nxt.onload=put; nxt.onerror=put; nxt.src=su;
@@ -947,28 +952,47 @@ function sequences(){
     seqUpdaters.push(upd); upd();
   });
 }
-/* Phones (an iPhone 11 Pro has 4 GB) can't hold hundreds of 1280px photos: Safari runs out of memory and kills
-   the tab. So on a phone only the photo strips near the screen have a picture at all, and it's the 640px copy.
-   Frames that scroll well away go back to a 1px placeholder (the browser cache makes coming back quick).
-   The full-size set stays in data-ss / data-u for the lightbox. Desktop and tablets are untouched. */
-let lightIO=null;
-function lightenPhotos(){
-  if(lightIO){lightIO.disconnect();lightIO=null}
-  if(!matchMedia('(max-width:700px)').matches)return;
-  const imgs=[...document.querySelectorAll('.seq-strip .frame .fr-img img')];
-  if(!imgs.length)return;
-  const TINY='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-  imgs.forEach(im=>{
-    im.dataset.ss=im.getAttribute('srcset')||'';im.dataset.u=im.getAttribute('src');
-    im.removeAttribute('srcset');im.removeAttribute('sizes');im.removeAttribute('loading');im.src=TINY;im.dataset.on='0';
-  });
-  let hy=0,de=0;
-  lightIO=new IntersectionObserver(es=>{es.forEach(e=>{
+/* The Work page holds ~1,000 photos in ~130 sideways strips. iPhone Safari gives every scrollable strip its own
+   native scroll layer and kills the tab when a page holds too much ("A problem repeatedly occurred"). So only the
+   rows within about a screen of view are live: a live strip scrolls and shows its pictures, and only the frames
+   within a strip-width of what's showing in it have a picture at all. Every other strip is overflow:hidden
+   (no scroll layer) and all its frames hold the 1px placeholder. Coming back is quick: the browser keeps the files.
+   Phones (any orientation) use the 640px copy; bigger screens pick from the full set. The lightbox reads data-*. */
+let rowIO=null;const stripIO=new Map();
+const smallScreen=()=>matchMedia('(max-width:700px)').matches||
+  (matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=500);
+function hydrate(im){
+  if(smallScreen()){im.removeAttribute('srcset');im.removeAttribute('sizes')}
+  else{im.sizes=im.dataset.sz;im.srcset=im.dataset.ss}
+  im.src=im.dataset.u;im.dataset.on='1';
+}
+function park(im){im.removeAttribute('srcset');im.src=TINY;im.dataset.on='0'}
+function warmRow(seq){
+  const strip=seq.querySelector('.seq-strip');if(!strip||stripIO.has(strip))return;
+  strip.classList.remove('cold');
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
     const im=e.target,on=im.dataset.on==='1';
-    if(e.isIntersecting&&!on){im.src=im.dataset.u;im.dataset.on='1';hy++}
-    else if(!e.isIntersecting&&on){im.src=TINY;im.dataset.on='0';de++}
-  });if(window.cbLog)cbLog('photos hydrated '+hy+' parked '+de)},{rootMargin:'500px 350px'});
-  imgs.forEach(im=>lightIO.observe(im));
+    if(e.isIntersecting&&!on)hydrate(im);else if(!e.isIntersecting&&on)park(im);
+  }),{root:strip,rootMargin:'0px 100%'});
+  strip.querySelectorAll('.fr-img img').forEach(im=>io.observe(im));
+  stripIO.set(strip,io);
+}
+function coolRow(seq){
+  const strip=seq.querySelector('.seq-strip');if(!strip)return;
+  const io=stripIO.get(strip);if(io){io.disconnect();stripIO.delete(strip)}
+  strip.querySelectorAll('.fr-img img[data-on="1"]').forEach(park);
+  strip.classList.add('cold');
+}
+function photoWindow(){
+  if(rowIO){rowIO.disconnect();rowIO=null}
+  stripIO.forEach(io=>io.disconnect());stripIO.clear();
+  const rows=[...document.querySelectorAll('.seq')];if(!rows.length)return;
+  rows.forEach(r=>{const s=r.querySelector('.seq-strip');if(s)s.classList.add('cold')});
+  rowIO=new IntersectionObserver(es=>{
+    es.forEach(e=>e.isIntersecting?warmRow(e.target):coolRow(e.target));
+    if(window.cbLog)cbLog('rows live '+stripIO.size+', pictures '+document.querySelectorAll('.fr-img img[data-on="1"]').length);
+  },{rootMargin:'100% 0px'});
+  rows.forEach(r=>rowIO.observe(r));
 }
 let railScroll=null;
 function chapterRail(){
@@ -1615,7 +1639,7 @@ function render(path){
   scrollTo({top:0,behavior:'instant'});
   const then=jumpAfter&&document.getElementById(jumpAfter);jumpAfter=null;
   if(then)then.scrollIntoView({behavior:'instant',block:'start'});
-  observe();dragScroll();sequences();lightenPhotos();chapterRail();letterForm();pricing();reel();
+  observe();dragScroll();sequences();photoWindow();chapterRail();letterForm();pricing();reel();
   paintLogos();labelFills();
   if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
@@ -1665,9 +1689,10 @@ async function go(){
     if(navigated){                              // after an in-site link, put focus on the new page's heading
       const h=main.querySelector('h1'); if(h){h.tabIndex=-1;h.focus({preventScroll:true})}
     }
-    main.classList.add(goingRight?'enter-r':'enter-l');
+    // Work on a phone just fades in: sliding it would make Safari paint the whole 70,000px page as one moving layer
+    main.classList.add(target==='/portfolio'&&smallScreen()?'enter-f':goingRight?'enter-r':'enter-l');
     main.offsetHeight;                          // forces style, so the off-screen start is committed before it's removed
-    main.classList.remove('enter-l','enter-r');
+    main.classList.remove('enter-l','enter-r','enter-f');
     document.querySelectorAll('body>.rail').forEach(r=>r.classList.remove('out'));
     await Promise.race([afterTransition(main,500),new Promise(r=>wake=r)]);
     wake=null;

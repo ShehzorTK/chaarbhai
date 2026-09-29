@@ -214,12 +214,15 @@ P['/']=()=>`
 </section>`;
 
 P['/portfolio']=()=>`
-<div class="wk-tog-pos">${VF.toggleHTML('photos')}</div>
-<section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(40px,6vw,70px)">
+<section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(28px,4vw,48px)">
   <h1 class="d1 rv" data-d="1">The archive</h1>
-  <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened: one couple to a row, from the first portrait to the goodbye at the end of the night. Tap any photo to see it bigger.</p>
+  <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened. Look through the photos, one couple to a row (tap any photo to see it bigger), or watch the films, grouped by event.</p>
+  <div class="wk-tog-row rv" data-d="3">${VF.toggleHTML('photos')}</div>
 </section>
 
+<div id="wk-videos" hidden></div>
+
+<div id="wk-photos">
 <section style="padding-top:0;padding-bottom:clamp(20px,3vw,44px)">
   <div class="ilist">
     ${CHAPTERS.map((c,i)=>`
@@ -278,7 +281,8 @@ ${CHAPTERS.map(c=>`
 <section class="cta">
   <h2 class="rv">See if your<br>date is open</h2>
   <div class="rv" data-d="1" style="margin-top:38px"><a href="#/contact" data-nav class="btn"><span>Get in touch</span><i></i></a></div>
-</section>`;
+</section>
+</div>`;
 
 P['/about']=()=>`
 <section class="hero" style="min-height:70svh;justify-content:flex-end">
@@ -864,9 +868,10 @@ function lightbox(frame){
       const L=LB.list; LB.i=i=Math.max(0,Math.min(L.length-1,i));
       const src=L[i].querySelector('.fr-img img');
       img.classList.add('swap');
-      const nxt=new Image(); nxt.sizes='94vw'; nxt.srcset=src.srcset;
-      const put=()=>{img.sizes='94vw';img.srcset=src.srcset;img.src=src.src;img.alt=src.alt;img.classList.remove('swap')};
-      nxt.onload=put; nxt.onerror=put; nxt.src=src.src;
+      const ss=src.dataset.ss||src.srcset,su=src.dataset.u||src.src;   // phones park the full-size set in data-*, see lightenPhotos
+      const nxt=new Image(); nxt.sizes='94vw'; nxt.srcset=ss;
+      const put=()=>{img.sizes='94vw';img.srcset=ss;img.src=su;img.alt=src.alt;img.classList.remove('swap')};
+      nxt.onload=put; nxt.onerror=put; nxt.src=su;
       q('.lb-no').textContent=String(i+1).padStart(2,'0')+' / '+String(L.length).padStart(2,'0');
       q('.lb-cap').textContent=L[i].querySelector('.fr-cap span:last-child').textContent;
       q('.lb-t').textContent=LB.title;
@@ -941,6 +946,28 @@ function sequences(){
     next.addEventListener('click',()=>strip.scrollBy({left:step(),behavior:reduceMotion()?'auto':'smooth'}));
     seqUpdaters.push(upd); upd();
   });
+}
+/* Phones (an iPhone 11 Pro has 4 GB) can't hold hundreds of 1280px photos: Safari runs out of memory and kills
+   the tab. So on a phone only the photo strips near the screen have a picture at all, and it's the 640px copy.
+   Frames that scroll well away go back to a 1px placeholder (the browser cache makes coming back quick).
+   The full-size set stays in data-ss / data-u for the lightbox. Desktop and tablets are untouched. */
+let lightIO=null;
+function lightenPhotos(){
+  if(lightIO){lightIO.disconnect();lightIO=null}
+  if(!matchMedia('(max-width:700px)').matches)return;
+  const imgs=[...document.querySelectorAll('.seq-strip .frame .fr-img img')];
+  if(!imgs.length)return;
+  const TINY='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  imgs.forEach(im=>{
+    im.dataset.ss=im.getAttribute('srcset')||'';im.dataset.u=im.getAttribute('src');
+    im.removeAttribute('srcset');im.removeAttribute('sizes');im.removeAttribute('loading');im.src=TINY;im.dataset.on='0';
+  });
+  lightIO=new IntersectionObserver(es=>es.forEach(e=>{
+    const im=e.target,on=im.dataset.on==='1';
+    if(e.isIntersecting&&!on){im.src=im.dataset.u;im.dataset.on='1'}
+    else if(!e.isIntersecting&&on){im.src=TINY;im.dataset.on='0'}
+  }),{rootMargin:'500px 350px'});
+  imgs.forEach(im=>lightIO.observe(im));
 }
 let railScroll=null;
 function chapterRail(){
@@ -1586,7 +1613,7 @@ function render(path){
   scrollTo({top:0,behavior:'instant'});
   const then=jumpAfter&&document.getElementById(jumpAfter);jumpAfter=null;
   if(then)then.scrollIntoView({behavior:'instant',block:'start'});
-  observe();dragScroll();sequences();chapterRail();letterForm();pricing();reel();
+  observe();dragScroll();sequences();lightenPhotos();chapterRail();letterForm();pricing();reel();
   paintLogos();labelFills();
   if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
@@ -1695,7 +1722,7 @@ let ly=0;
 addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
   h.classList.toggle('solid',y>36);
   if(Math.abs(y-ly)<8)return;                  // trackpad and momentum jitter shouldn't flick the header in and out
-  h.classList.toggle('hide',y>ly&&y>330&&!navlinks.classList.contains('open'));ly=y;},{passive:true});
+  h.classList.toggle('hide',y>ly&&y>330&&!navlinks.classList.contains('open')&&!document.body.classList.contains('vf-in'));ly=y;},{passive:true});
 
 /* ================= PRELOADER =================
    Genuinely waits for every image the site uses, plus fonts.

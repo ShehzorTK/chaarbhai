@@ -13,7 +13,10 @@ const $=(s,r=document)=>r.querySelector(s);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const saveData=()=>!!(navigator.connection&&navigator.connection.saveData);
-const thumbUrl=id=>'https://i.ytimg.com/vi/'+id+'/maxresdefault.jpg';
+/* Phones get YouTube's 480px still (its black bars are cropped off by object-fit:cover) instead of the 1280px one,
+   and a slide only fetches its still when it is within 2 of the one on screen. */
+const PHONE=matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coarse)').matches;
+const thumbUrl=id=>'https://i.ytimg.com/vi/'+id+(PHONE?'/hqdefault.jpg':'/maxresdefault.jpg');
 const thumbLo=id=>'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';
 const watchUrl=id=>'https://www.youtube.com/watch?v='+id;
 const fmtDur=s=>{const m=Math.round(s/60),h=Math.floor(m/60),r=m%60;
@@ -37,6 +40,19 @@ const writeSound=on=>{try{sessionStorage.setItem(SND_KEY,on?'1':'0')}catch(e){}}
   if(window.ResizeObserver)new ResizeObserver(set).observe(h);
 })();
 
+/* open the connections early (a few hundred ms saved on a phone) */
+let warmed=false;
+function warm(){
+  if(warmed)return;warmed=true;
+  ['https://www.youtube.com','https://www.youtube-nocookie.com','https://i.ytimg.com'].forEach(h=>{
+    const l=document.createElement('link');l.rel='preconnect';l.href=h;document.head.appendChild(l);
+  });
+  loadYT().catch(()=>{});
+}
+document.addEventListener('pointerdown',e=>{
+  if(e.target.closest&&e.target.closest('a[href="#/portfolio/videos"]'))warm();
+},{passive:true});
+
 /* ---------- YouTube IFrame API, loaded once ---------- */
 let ytP=null;
 function loadYT(){
@@ -57,6 +73,14 @@ function loadYT(){
 function toggleHTML(active){
   const a=(v,href,label)=>`<a href="${href}"${active===v?' aria-current="true"':''}>${label}</a>`;
   return `<div class="wk-tog" role="group" aria-label="Work view">${a('photos','#/portfolio','Photos')}${a('videos',HASH,'Videos')}</div>`;
+}
+
+/* the toggle under the heading is page markup; keep its highlight in step with the view */
+function markToggle(view){
+  document.querySelectorAll('.wk-tog-row .wk-tog a').forEach(a=>{
+    if(a.getAttribute('href')===(view==='videos'?HASH:'#/portfolio'))a.setAttribute('aria-current','true');
+    else a.removeAttribute('aria-current');
+  });
 }
 
 /* ---------- state while the feed is open ---------- */
@@ -89,7 +113,7 @@ function slideHTML(d,i){
   return `<section class="vf-slide" data-i="${i}" aria-label="${esc(ariaText(d))}">
   <div class="vf-wrap">
     <div class="vf-frame">
-      <img class="vf-thumb" alt="" loading="lazy" decoding="async" data-id="${id}" src="${thumbUrl(id)}">
+      <img class="vf-thumb" alt="" decoding="async" data-id="${id}">
       <div class="vf-mount"></div>
       <span class="vf-play" aria-hidden="true">${I.play}</span>
       <button class="vf-hit" type="button" aria-label="Play or pause"></button>
@@ -117,8 +141,9 @@ function slideHTML(d,i){
 
 /* ---------- open / close ---------- */
 function open(id){
-  if(!window.VIDEOS)return;
-  if(S){ if(id){const f=indexOfId(S.data,id);if(f)jump(f.i,f.mode)} return; }
+  const host=document.getElementById('wk-videos');
+  if(!window.VIDEOS||!host)return;
+  if(S){ if(id){const f=indexOfId(S.data,id);if(f)jump(f.i,f.mode)} else alignFeed(true); return; }
   const data=flatten(); if(!data.length)return;
   const found=id?indexOfId(data,id):null;
   if(found)data[found.i].mode=found.mode;
@@ -133,15 +158,14 @@ function open(id){
       }).join('')}</div></div>
     <div class="vf-feed">${data.map(slideHTML).join('')}</div>
     <p class="vf-sr" role="status" aria-live="polite"></p>`;
-  document.body.appendChild(root);
+  host.textContent='';host.appendChild(root);host.hidden=false;markToggle('videos');warm();
+  const ph=document.getElementById('wk-photos');if(ph)ph.hidden=true;
   document.body.classList.add('vf-on');
-  const main=document.getElementById('main'),foot=document.querySelector('footer'),hdr=document.getElementById('hdr');
-  if(main)main.inert=true; if(foot)foot.inert=true; if(hdr)hdr.classList.remove('hide');
 
   S={data,root,feed:$('.vf-feed',root),slides:[...root.querySelectorAll('.vf-slide')],
      chips:[...root.querySelectorAll('.vf-chip')],chipBar:$('.vf-chips',root),live:$('.vf-sr[role=status]',root),
      players:new Map(),active:-1,target:null,soundOn:readSound(),reduce:reduceMotion(),
-     noAuto:reduceMotion()||saveData(),hiddenPause:false,lastEv:-1,deb:0,cand:-1,flashT:0};
+     noAuto:reduceMotion()||saveData(),away:true,inView:false,host,lastEv:-1,deb:0,cand:-1,flashT:0};
 
   const drop=()=>{if(S)S.target=null};
   S.feed.addEventListener('wheel',drop,{passive:true});
@@ -158,11 +182,27 @@ function open(id){
     S.deb=setTimeout(()=>{if(S&&S.cand>=0)activate(S.cand)},150);
   },{root:S.feed,threshold:[0.6]});
   S.slides.forEach(el=>S.io.observe(el));
+  /* the feed is one block in the page: it only plays while at least half of it is on screen */
+  S.vio=new IntersectionObserver(es=>{
+    const e=es[es.length-1];
+    S.inView=e.intersectionRatio>=0.5;
+    document.body.classList.toggle('vf-in',S.inView);
+    syncAway();
+  },{threshold:[0,0.5]});
+  S.vio.observe(root);
   S.poll=setInterval(tick,250);
 
   if(startAt>0)S.feed.scrollTo({top:S.slides[startAt].offsetTop,behavior:'instant'});
   activate(startAt);
-  const cur=$('.wk-tog a[aria-current]',root);if(cur)cur.focus({preventScroll:true});
+  alignFeed(!found);      // a link to one video lands on it at once; the Videos button slides down to the feed
+}
+
+/* put the feed's top edge just under the site header, so it fills the screen */
+function alignFeed(smooth){
+  if(!S)return;
+  const hdr=document.getElementById('hdr');
+  const top=S.root.getBoundingClientRect().top+scrollY-(hdr?hdr.offsetHeight:0);
+  scrollTo({top:Math.max(0,top),behavior:smooth&&!S.reduce?'smooth':'instant'});
 }
 
 function jump(i,mode){
@@ -176,17 +216,19 @@ function jump(i,mode){
 function close(opts){
   if(!S)return;
   const s=S; S=null;
-  clearTimeout(s.deb);clearTimeout(s.flashT);clearInterval(s.poll);
-  s.io.disconnect();
+  clearTimeout(s.deb);clearTimeout(s.flashT);clearTimeout(s.nbT);clearInterval(s.poll);
+  s.io.disconnect();s.vio.disconnect();
   s.players.forEach(r=>kill(r));
   s.players.clear();
   document.removeEventListener('keydown',onKey);
   document.removeEventListener('visibilitychange',onVis);
-  s.root.remove();
-  document.body.classList.remove('vf-on');
-  const main=document.getElementById('main'),foot=document.querySelector('footer');
-  if(main)main.inert=false; if(foot)foot.inert=false;
-  if(opts&&opts.focus){const a=$('#main .wk-tog a[aria-current]');if(a)a.focus({preventScroll:true})}
+  s.root.remove();s.host.hidden=true;markToggle('photos');
+  const ph=document.getElementById('wk-photos');if(ph)ph.hidden=false;
+  document.body.classList.remove('vf-on','vf-in');
+  if(opts&&opts.focus){
+    scrollTo({top:0,behavior:'instant'});
+    const a=$('#main .wk-tog a[aria-current]');if(a)a.focus({preventScroll:true});
+  }
 }
 
 function pauseAll(){ if(S)S.players.forEach(r=>pause(r)); }
@@ -228,7 +270,7 @@ function refreshSlide(k){
   const d=S.data[k],el=S.slides[k],id=curId(d);
   el.setAttribute('aria-label',ariaText(d));
   $('.vf-meta',el).textContent=metaText(d);
-  const im=$('.vf-thumb',el);im.dataset.id=id;delete im.dataset.lo;im.src=thumbUrl(id);
+  const im=$('.vf-thumb',el);im.dataset.id=id;delete im.dataset.lo;if(im.getAttribute('src'))im.src=thumbUrl(id);
   $$('.vf-yt,.vf-ytc',el).forEach(a=>a.href=watchUrl(id));
   const b=$('.vf-film',el);
   if(b){
@@ -242,7 +284,7 @@ function onReady(r){
   if(r.dead||!S)return;
   r.ready=true;
   frameOf(r.k).classList.add('is-ready');
-  if(S.active===r.k&&r.want&&!S.hiddenPause)startPlay(r);
+  if(S.active===r.k&&r.want){ if(S.away)r.resume=true; else startPlay(r); }
 }
 function onErr(r){
   if(r.dead||!S)return;
@@ -256,9 +298,9 @@ function onState(r,s){
   r.state=s;
   const fr=frameOf(r.k);
   if(r.k!==S.active){ if(s===1)pause(r); fr.classList.remove('is-playing'); return; }
-  if(s===1&&S.hiddenPause){pause(r);return}
+  if(s===1&&S.away){pause(r);r.resume=true;return}
   fr.classList.toggle('is-playing',s===1||s===3);
-  if(s===1)fr.classList.remove('is-error');
+  if(s===1){fr.classList.remove('is-error');mountNeighbours()}
   if(s===0&&AUTO_ADVANCE)advance();
 }
 function startPlay(r){
@@ -291,19 +333,45 @@ function playActive(){
   const r=S.players.get(S.active); if(!r)return;
   if(S.noAuto&&!r.user)return;      // reduced motion / data saver: wait for a tap
   r.want=true;
+  if(S.away){r.resume=true;return}
   if(r.ready)startPlay(r);
+}
+/* Players live for the slide on screen and its neighbours (a phone keeps only the next one). The one on screen
+   is created first; the neighbours wait until it is playing (or 2.5s), so they don't slow its start. */
+function keepSet(a){
+  const n=S.data.length,keep=[a];
+  if(a+1<n)keep.push(a+1);
+  if(!PHONE&&a>0)keep.push(a-1);
+  return keep;
 }
 function syncWindow(){
   const a=S.active,n=S.data.length;
+  clearTimeout(S.nbT);
   if(S.noAuto){
     for(let k=0;k<n;k++){ if(k!==a)destroy(k); }
     return;
   }
-  for(let k=0;k<n;k++){ if(Math.abs(k-a)>1)destroy(k); }
-  mount(a); if(a+1<n)mount(a+1); if(a>0)mount(a-1);
+  const keep=keepSet(a);
+  for(let k=0;k<n;k++){ if(!keep.includes(k))destroy(k); }
+  mount(a);
+  S.nbDone=false;
+  S.nbT=setTimeout(mountNeighbours,2500);
+}
+function mountNeighbours(){
+  if(!S||S.nbDone||S.noAuto)return;
+  S.nbDone=true;clearTimeout(S.nbT);
+  keepSet(S.active).forEach(k=>{if(k!==S.active)mount(k)});
 }
 
 /* ---------- activation ---------- */
+function loadThumbs(){
+  const a=S.active;
+  S.slides.forEach((el,k)=>{
+    if(Math.abs(k-a)>2)return;
+    const im=$('.vf-thumb',el);
+    if(!im.getAttribute('src'))im.src=thumbUrl(im.dataset.id);
+  });
+}
 function activate(i){
   if(!S||i<0||i>=S.data.length)return;
   if(S.target===i)S.target=null;      // arrived; a manual scroll clears it too (below)
@@ -311,7 +379,7 @@ function activate(i){
   const prevEv=S.lastEv,d=S.data[i];
   S.active=i;
   S.players.forEach((r,k)=>{if(k!==i)pause(r)});
-  syncWindow();
+  syncWindow();loadThumbs();
   S.slides.forEach((el,k)=>{el.inert=k!==i;el.classList.toggle('is-active',k===i)});
   S.lastEv=d.ei;
   S.chips.forEach(c=>{
@@ -462,7 +530,7 @@ function onKey(e){
   if(!S||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey)return;
   const t=e.target;
   if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
-  if(document.body.classList.contains('locked'))return;      // the mobile menu is open
+  if(document.body.classList.contains('locked')||S.away)return;   // the mobile menu is open, or the feed isn't on screen
   const k=e.key;
   if(k==='ArrowDown'||k==='j'||k==='PageDown'){e.preventDefault();step(1)}
   else if(k==='ArrowUp'||k==='k'||k==='PageUp'){e.preventDefault();step(-1)}
@@ -472,17 +540,21 @@ function onKey(e){
   }
   else if(k==='m'||k==='M'){setSound(!S.soundOn)}
 }
-function onVis(){
+/* away = the tab is hidden, or less than half the feed is on screen */
+function syncAway(){
   if(!S)return;
+  const away=document.hidden||!S.inView;
+  if(away===S.away)return;
+  S.away=away;
   const r=S.players.get(S.active);
-  if(document.hidden){
-    S.hiddenPause=true;
-    if(r){r.resume=(r.state===1||r.state===3)&&!r.paused;pause(r);r.want=false}
-  }else{
-    S.hiddenPause=false;
-    if(r&&r.resume){r.resume=false;startPlay(r)}
+  if(away){
+    if(r){r.resume=r.resume||((r.state===1||r.state===3)&&!r.paused);pause(r);r.want=false}
+  }else if(r&&r.resume&&!r.paused){
+    r.resume=false;
+    if(!S.noAuto||r.user)startPlay(r);
   }
 }
+function onVis(){syncAway()}
 /* thumbnails: YouTube answers a missing maxres image with a 120px placeholder */
 function onImg(e){
   const im=e.target;

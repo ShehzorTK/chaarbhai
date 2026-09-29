@@ -970,7 +970,7 @@ function park(im){im.removeAttribute('srcset');im.src=TINY;im.dataset.on='0'}
 function warmRow(seq){
   const strip=seq.querySelector('.seq-strip');if(!strip||stripIO.has(strip))return;
   strip.classList.remove('cold');
-  if(strip._upd)strip._upd();
+  if(strip._upd){const u=strip._upd,run=()=>scrolling()?setTimeout(run,150):u();setTimeout(run,0)}   // reads layout: not mid-scroll
   const io=new IntersectionObserver(es=>es.forEach(e=>{
     const im=e.target,on=im.dataset.on==='1';
     if(e.isIntersecting&&!on)hydrate(im);else if(!e.isIntersecting&&on)park(im);
@@ -998,6 +998,9 @@ function photoWindow(){
    stays smooth). Laying out all ~130 rows before the first paint took well over a second on a phone.
    Jumping to a chapter builds everything up to it first, so nothing above the landing spot moves. */
 const FIRST_ROWS=3,BATCH_MS=6;
+/* the background work waits while the page is moving, so a scroll (and the header) never queue behind it */
+let lastScroll=0;addEventListener('scroll',()=>{lastScroll=performance.now()},{passive:true});
+const scrolling=()=>performance.now()-lastScroll<250;
 let rowJob=null,rowGen=0;
 function addRows(ci,n){
   const c=CHAPTERS[ci],body=document.querySelector(`.ch-body[data-ci="${ci}"]`);if(!body)return 0;
@@ -1018,6 +1021,7 @@ function buildRows(){
   while(ci<CHAPTERS.length&&made<FIRST_ROWS){made+=addRows(ci,FIRST_ROWS-made);if(!rowsLeft(ci))ci++}
   const pump=()=>{
     rowJob=null;if(gen!==rowGen||!document.querySelector('#wk-photos .ch-body'))return;
+    if(scrolling()){rowJob=setTimeout(pump,150);return}
     const t0=performance.now();
     while(ci<CHAPTERS.length&&performance.now()-t0<BATCH_MS){addRows(ci,2);if(!rowsLeft(ci))ci++}
     if(ci<CHAPTERS.length)rowJob=setTimeout(pump,24);
@@ -1606,13 +1610,13 @@ function snLoad(){
   // minHeight: its first report comes before the form has drawn, and says 0.
   // A frame that small gets frozen by the browser and never draws the form.
   s.onload=()=>{if(window.iFrameResize)iFrameResize({log:false,minHeight:320,onResized:e=>{
-    const h=+e.height,prev=snH,parked=snHost.classList.contains('parked');
+    const h=+e.height,prev=snH,parked=snHost.classList.contains('parked'),wasReady=snHost.classList.contains('ready');
     if(parked&&h<400)return;                    // hidden, it measures as empty: keep the last real height
     snH=h;
     if(h>400)ready();                           // the form has drawn, not just its empty page
     snPlace();
     // the thank-you is much shorter than the form: bring it into view
-    if(!parked&&prev-h>300){
+    if(wasReady&&!parked&&prev-h>300){          // not the form's first draw (it starts from a guessed height)
       const w=document.querySelector('.sn-wrap');if(w)w.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'});
     }
   }},snFrame)};
@@ -1637,7 +1641,11 @@ function snPlace(){
 }
 new ResizeObserver(()=>snPlace()).observe(page);
 {
-  const start=()=>preGone.then(()=>window.requestIdleCallback?requestIdleCallback(snLoad,{timeout:2000}):setTimeout(snLoad,500));
+  // Phones skip the head start: the hidden form is a whole second web page, and on an iPhone it runs on the same
+  // thread as the site, so while it loads, scrolling (and the header coming back) stalls for a third of a second at a
+  // time. On a phone it loads when Contact is opened instead (letterForm).
+  const start=()=>{if(smallScreen())return;
+    preGone.then(()=>window.requestIdleCallback?requestIdleCallback(snLoad,{timeout:2000}):setTimeout(snLoad,500))};
   if(document.readyState==='complete')start();else addEventListener('load',start);
 }
 function letterForm(){
@@ -1697,6 +1705,9 @@ function render(path){
    while the first screen of photos comes in. Shown each time Work is opened from another page (not on the very first
    visit, which already has the preloader). It stays only until the chapter covers and the photos in the first rows
    have loaded (never more than 6s), so with the files cached it is barely seen. A new line every 1.8s while it waits. */
+/* Contact gets the same screen when its enquiry form isn't ready yet (on a phone the form only starts loading when
+   Contact opens). It stays until the form has drawn, never more than 8s. */
+const CT_LINES=['Getting the form ready for you.','Have your date and venue handy.','Almost there. Tell us about your wedding in a second.'];
 const WK_LINES=['Nearly a thousand photos in here. Give us a second.','These are full quality files, not thumbnails.',
   'Pulling up every couple, from the first portrait to the goodbye.','Almost there. Worth the wait, promise.'];
 let preDone=false;preGone.then(()=>{preDone=true});
@@ -1710,17 +1721,30 @@ const wkLoader=(()=>{
     fill=el.querySelector('.fill');track=el.querySelector('.track i');msg=el.querySelector('.wk-msg');
   };
   const paint=p=>{fill.style.clipPath=`inset(${(1-p)*100}% 0 0 0)`;track.style.transform=`scaleX(${p})`};
-  const say=i=>{msg.classList.add('out');setTimeout(()=>{msg.textContent=WK_LINES[i%WK_LINES.length];msg.classList.remove('out')},reduceMotion()?0:250)};
+  let lines=WK_LINES;
+  const say=i=>{msg.classList.add('out');setTimeout(()=>{msg.textContent=lines[i%lines.length];msg.classList.remove('out')},reduceMotion()?0:250)};
   return {
-    start(){
+    start(set=WK_LINES){
       if(!preDone)return false;
       if(!el)make();
-      const my=++job;clearInterval(rot);paint(0);msg.textContent=WK_LINES[0];msg.classList.remove('out');
+      lines=set;const my=++job;clearInterval(rot);paint(0);msg.textContent=lines[0];msg.classList.remove('out');
       el.classList.add('on');
       let i=0;rot=setInterval(()=>{if(my===job)say(++i)},1800);
       return true;
     },
     stop(){if(el&&el.classList.contains('on')){job++;clearInterval(rot);el.classList.remove('on')}},
+    /* Contact: no real progress to show, so the bar eases toward 90% until the form reports it has drawn */
+    waitForm(){
+      if(!el||!el.classList.contains('on'))return;
+      const my=job,t0=performance.now();
+      const tick=()=>{
+        if(my!==job)return;
+        if(document.body.classList.contains('sn-ready')||performance.now()-t0>8000){
+          job++;clearInterval(rot);paint(1);setTimeout(()=>el.classList.remove('on'),120);return}
+        paint(.9*(1-Math.exp(-(performance.now()-t0)/1500)));requestAnimationFrame(tick);
+      };
+      tick();
+    },
     /* call after Work has rendered: waits two frames so the first rows have been handed their photos */
     wait(){
       if(!el||!el.classList.contains('on'))return;
@@ -1760,7 +1784,9 @@ async function go(){
   while(pendingPath!==currentPath){
     const target=pendingPath;
     const goingRight=ORDER.indexOf(target)>=ORDER.indexOf(currentPath);
-    if(target==='/portfolio'&&currentPath!==null)wkLoader.start();else wkLoader.stop();
+    if(target==='/portfolio'&&currentPath!==null)wkLoader.start();
+    else if(target==='/contact'&&!document.body.classList.contains('sn-ready'))wkLoader.start(CT_LINES);
+    else wkLoader.stop();
     if(currentPath!==null&&!hidden){
       main.classList.add(goingRight?'leave-l':'leave-r');
       document.querySelectorAll('body>.rail').forEach(r=>r.classList.add('out'));
@@ -1773,7 +1799,7 @@ async function go(){
     const navigated=currentPath!==null;
     render(target);
     currentPath=target;
-    if(target==='/portfolio')wkLoader.wait();
+    if(target==='/portfolio')wkLoader.wait();else if(target==='/contact')wkLoader.waitForm();
     if(navigated){                              // after an in-site link, put focus on the new page's heading
       const h=main.querySelector('h1'); if(h){h.tabIndex=-1;h.focus({preventScroll:true})}
     }

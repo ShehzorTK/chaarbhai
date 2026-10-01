@@ -1672,10 +1672,10 @@ function reel(){
   loadYT().then(()=>{
     if(!document.body.contains(el))return;          // left the home page meanwhile
     const p=new YT.Player(el,{
-      videoId:REEL,host:'https://www.youtube-nocookie.com',
-      playerVars:{autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
+      videoId:REEL,
+      playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
-        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
+        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.referrerPolicy='strict-origin-when-cross-origin';f.setAttribute('aria-hidden','true');
           f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
           // browsers can hold back the first play (a tab still in the background,
           // a slow start), so nudge it a few times, and again when the tab comes

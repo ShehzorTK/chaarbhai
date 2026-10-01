@@ -118,7 +118,7 @@ html.seen #pre{display:none}
 #pre .track,#wkpre .track{width:min(210px,54vw);height:1px;background:var(--line);position:relative;overflow:hidden}
 #pre .track i,#wkpre .track i{position:absolute;inset:0;background:var(--gold);transform-origin:left;transform:scaleX(0)}
 
-/* Work's loading screen (wkLoader in app.js): the preloader's look, plus a changing line of copy */
+/* Work and Contact loading: the pen mark, readiness bar and rotating copy. */
 #wkpre{position:fixed;inset:0;z-index:10000;background:var(--ink);display:grid;place-items:center;
   opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s}
 #wkpre.on{opacity:1;visibility:visible;transition-duration:.15s}
@@ -999,3 +999,82 @@ body.vf-full{overflow:hidden}
 body.vf-full header,body.vf-full>.rail{visibility:hidden}
 @media (max-width:620px){.vf-cap{padding:12px var(--pad) 0}.vf-yt{display:none}}
 @media (prefers-reduced-motion:reduce){.vf-mount{transition:none}.vf-tick{animation-duration:.01s}}
+
+    .cb-loader{
+      --cb-background:#12141C;
+      --cb-logo-width:760px;
+      position:absolute;inset:0;z-index:20;
+      display:grid;place-items:center;
+      background:var(--cb-background);
+      opacity:1;transition:opacity .35s ease;
+      overflow:hidden;
+    }
+    .cb-loader[hidden]{display:none}
+    .cb-loader.is-leaving{opacity:0;pointer-events:none}
+    .cb-loader .cb-art{
+      position:relative;width:min(var(--cb-logo-width),78vw,130vh);
+      width:min(var(--cb-logo-width),78vw,130svh);
+      aspect-ratio:2048/981;opacity:1;
+    }
+    .cb-loader .cb-ink,
+    .cb-loader .cb-original,
+    .cb-loader .cb-effects{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .cb-loader .cb-ink{opacity:0}
+    .cb-loader .cb-original{opacity:1;object-fit:contain}
+    .cb-loader .cb-effects{overflow:visible;pointer-events:none;opacity:0}
+    .cb-loader.is-animated .cb-original{opacity:0}
+    .cb-loader.is-animated .cb-ink,
+    .cb-loader.is-animated .cb-effects{opacity:1}
+    .cb-loader.is-complete .cb-original{opacity:1}
+    .cb-loader.is-complete .cb-ink,
+    .cb-loader.is-complete .cb-effects{opacity:0}
+    @media(max-width:600px){
+      .cb-loader .cb-art{width:min(88vw,130svh)}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .cb-loader{transition:none}
+    }
+
+/* One shared pen mark, sized for each loading surface. */
+.cb-loader{pointer-events:none;z-index:1}
+.cb-loader .cb-art{width:min(var(--cb-logo-width),78vw,95vh);width:min(var(--cb-logo-width),78vw,95svh)}
+#pre .cb-loader{--cb-logo-width:430px;z-index:0}
+#pre .wrap,#wkpre .wrap{position:relative;z-index:2}
+#pre .cb-slot,#wkpre .cb-slot{position:relative;width:clamp(210px,40vw,430px);aspect-ratio:2048/981}
+#pre .cb-loader,#wkpre .cb-loader{--cb-logo-width:430px;background:transparent}
+#pre .cb-loader .cb-art,#wkpre .cb-loader .cb-art{width:100%}
+
+/* The available space follows the actual headline and body height. */
+.vhero-media{background:#12141C}
+.vhero .cb-hero-placeholder{position:absolute;inset:88px 0 calc(var(--cb-hero-copy,440px) + 24px);display:grid;place-items:center;container-type:size;transition:opacity .35s ease}
+.vhero .cb-hero-placeholder>img,.vhero .cb-loader .cb-art{width:min(840px,76vw,calc(100cqh * 2.087));height:auto;object-fit:contain}
+.vhero .cb-loader{--cb-background:transparent;--cb-logo-width:840px}
+.vhero .cb-hero-placeholder.is-leaving{opacity:0;pointer-events:none}
+@media(max-width:600px){
+  #pre .cb-loader .cb-art{width:min(430px,78vw)}
+  .vhero .cb-loader .cb-art,.vhero .cb-hero-placeholder>img{width:min(86vw,calc(100cqh * 2.087))}
+}
+@media(prefers-reduced-motion:reduce){.vhero .cb-hero-placeholder{transition:none}}
+
+/* The global img display rule must not reveal the static fallback during drawing. */
+.vhero .cb-hero-placeholder>img[hidden]{display:none}
+
+/* Keep the whole YouTube mount hidden, including its unstyled startup iframe. */
+.vhero-player{position:absolute;inset:0;overflow:hidden;visibility:hidden;pointer-events:none}
+.vhero-player.is-playing{visibility:visible}
+.vhero-player iframe{position:absolute;top:50%;left:50%;border:0;pointer-events:none;background:transparent;
+  width:max(100cqw,calc(100cqh*16/9));height:max(100cqh,calc(100cqw*9/16));
+  transform:translate(-50%,-50%) scale(1.16)}
+.cb-logo-flight{position:fixed;z-index:10002;object-fit:contain;pointer-events:none;transform-origin:top left;will-change:transform}
+header.cb-logo-landing{transition:none;transform:none;opacity:1;pointer-events:auto}
+header .brand img.cb-brand-in-flight{visibility:hidden}
+
+/* The hero follows the selected theme, including the waiting mark and copy. */
+:root[data-theme="light"] .vhero{--ink:#F4F0E7;--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-hi:#57492D;color:var(--paper)}
+.vhero .vhero-media{background:var(--ink)}
+:root[data-theme="light"] .vhero-media::after{background:linear-gradient(to top,rgba(244,240,231,.94) 0,rgba(244,240,231,.65) 28%,transparent 58%)}
+/* Preserve every original logo colour; contrast comes from a small shadow. */
+:root[data-theme="light"] .vhero .cb-hero-placeholder>img,
+:root[data-theme="light"] .vhero .cb-art,
+.cb-logo-flight.cb-flight-light{filter:drop-shadow(0 2px 2px rgba(29,31,44,.72))}
+.cb-logo-flight img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}

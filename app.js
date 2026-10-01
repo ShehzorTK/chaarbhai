@@ -132,12 +132,10 @@ const P={};
 P['/']=()=>`
 <section class="vhero">
   <div class="vhero-media">
-    <!-- The reel (YouTube id in REEL): muted so browsers allow autoplay,
-         looped, no controls. The poster photo stays until YouTube reports the
-         video is actually playing, so a blocked autoplay never shows a play
-         button. Reduced-motion visitors keep the photo. See reel(). -->
-    ${pic(PICKS.hero,'100vw',{alt:'',eager:true,cls:'vhero-poster'})}
-    <div id="reel"></div>
+    <!-- The pen mark stands in until YouTube actually plays. Reduced
+         motion and blocked playback retain the completed logo. -->
+    <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
+    <div class="vhero-player"><div id="reel"></div></div>
   </div>
   <div class="vhero-in">
     <h1>
@@ -743,10 +741,9 @@ P['/contact']=()=>`
 </section>`;
 
 /* ================= ENGINE ================= */
-/* one copy of the logo lives in the preloader, everything else points at it */
-const LOGO=document.getElementById('logosrc').getAttribute('src');
+/* Header and footer keep the original studio mark. */
+const LOGO='img/logo.png';
 const isLight=()=>document.documentElement.dataset.theme==='light';
-document.getElementById('lfill').src=LOGO;
 function paintLogos(){document.querySelectorAll('img[data-logo]').forEach(el=>{
   if(el.getAttribute('src')!==LOGO)el.setAttribute('src',LOGO);});}
 paintLogos();
@@ -1559,17 +1556,109 @@ function loadYT(){
   });
   return ytReady;
 }
+/* The pen describes the wait; the completed mark then becomes the header logo. */
+let heroPen=null,heroSizing=null,heroLogo=null;
+function homeLogo(placeholder){
+  const hero=placeholder.closest('.vhero'),copy=hero.querySelector('.vhero-in');
+  const header=document.getElementById('hdr'),small=header.querySelector('.brand img');
+  let disposed=false,played=false,settling=false,frame=0,flight=null,morph=null,pen=null;
+  let started=0,expected=8000,progress=0;
+  const localDemo=location.protocol==='file:'||['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+  try{expected=Math.max(3000,Math.min(20000,Number(sessionStorage.getItem('cb-reel-wait'))||8000))}catch(e){}
+  const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
+  size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
+  small.classList.add('cb-brand-in-flight');
+  const finishFlight=()=>{
+    if(flight)flight.remove();flight=null;
+    small.classList.remove('cb-brand-in-flight');header.classList.remove('cb-logo-landing');
+  };
+  const dispose=()=>{
+    disposed=true;cancelAnimationFrame(frame);sizing.disconnect();
+    if(morph)morph.cancel();finishFlight();
+    if(pen){pen.destroy();if(heroPen===pen)heroPen=null;pen=null;}
+  };
+  const fly=()=>{
+    if(disposed||!placeholder.isConnected)return;
+    sizing.disconnect();
+    const art=placeholder.querySelector('.cb-art')||placeholder.querySelector(':scope>img');
+    const from=art.getBoundingClientRect();
+    header.classList.add('cb-logo-landing');
+    const to=small.getBoundingClientRect();
+    if(reduceMotion()||from.width<1||from.height<1){placeholder.remove();dispose();return;}
+    flight=document.createElement('div');flight.setAttribute('aria-hidden','true');flight.className='cb-logo-flight';
+    flight.innerHTML='<img src="img/pen-loader-1.png" alt="">';
+    if(isLight())flight.classList.add('cb-flight-light');
+    Object.assign(flight.style,{left:from.left+'px',top:from.top+'px',width:from.width+'px',height:from.height+'px'});
+    document.body.appendChild(flight);
+    // One visible mark: the large drawing becomes the small header mark at landing.
+    small.classList.add('cb-brand-in-flight');placeholder.remove();
+    if(pen){pen.destroy();if(heroPen===pen)heroPen=null;pen=null;}
+    morph=flight.animate([
+      {transform:'translate(0,0) scale(1,1)'},
+      {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`}
+    ],{duration:700,easing:getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim(),fill:'forwards'});
+    morph.finished.then(()=>{if(!disposed){finishFlight();disposed=true;}},()=>{});
+  };
+  const settle=()=>{
+    if(disposed||settling||!placeholder.isConnected)return;
+    settling=true;
+    cancelAnimationFrame(frame);
+    if(!pen){fly();return;}
+    // Complete the remaining strokes on readiness, then preserve the mark while it travels.
+    const from=progress,t0=performance.now();
+    const complete=now=>{
+      if(disposed)return;
+      const p=Math.min(1,(now-t0)/240);
+      progress=from+(1-from)*p;pen.seek(progress*pen.drawEnd);
+      if(p<1)frame=requestAnimationFrame(complete);else{pen.finish();fly();}
+    };
+    frame=requestAnimationFrame(complete);
+  };
+  const ready=preGone.then(async()=>{
+    if(disposed||!placeholder.isConnected)return;
+    if(reduceMotion()){if(played)settle();return;}
+    // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
+    pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
+    placeholder.querySelector(':scope>img').hidden=true;
+    await pen.ready;
+    if(disposed)return;
+    started=performance.now();
+    if(played){settle();return;}
+    const draw=now=>{
+      if(disposed||played)return;
+      // Local preview demonstrates the logo itself without waiting for a video.
+      // Published hosts remain strictly tied to the real PLAYING event.
+      progress=localDemo?Math.min(1,(now-started)/8000):Math.min(.94,1-Math.exp(-(now-started)/expected));
+      pen.seek(progress*pen.drawEnd);
+      if(localDemo&&progress===1){played=true;pen.finish();fly();return;}
+      frame=requestAnimationFrame(draw);
+    };
+    frame=requestAnimationFrame(draw);
+  });
+  return {
+    dispose,
+    playing(){
+      if(disposed||played)return;
+      played=true;
+      if(started)try{sessionStorage.setItem('cb-reel-wait',String(Math.max(3000,performance.now()-started)))}catch(e){}
+      ready.then(()=>{if(!disposed)settle()});
+    }
+  };
+}
 function reel(){
-  const el=document.getElementById('reel');
-  if(!el||reduceMotion())return;
+  if(heroLogo){heroLogo.dispose();heroLogo=null;}
+  const el=document.getElementById('reel');if(!el)return;
+  const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
+  heroLogo=homeLogo(placeholder);const logo=heroLogo;
+  let shown=false;
+  if(reduceMotion())return;
   // YouTube won't play embeds on a page opened straight from disk (file://):
   // it needs a real web address to check where it's embedded. The poster
-  // photo stands in; the reel plays once the site is served (Netlify, or a
+  // logo stands in; the reel plays once the site is served (Netlify, or a
   // local server) rather than double-clicked.
   if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
     if(!document.body.contains(el))return;          // left the home page meanwhile
-    let shown=false;
     const p=new YT.Player(el,{
       videoId:REEL,host:'https://www.youtube-nocookie.com',
       playerVars:{autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
@@ -1592,10 +1681,13 @@ function reel(){
             const t=e.target.getCurrentTime&&e.target.getCurrentTime();
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
-          if(e.data===YT.PlayerState.PLAYING&&!shown){shown=true;setTimeout(()=>{const f=p.getIframe();if(f)f.classList.add('on')},1800)}
+          if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
+            shown=true;const f=e.target.getIframe();if(f)f.classList.add('on');
+            playerShell.classList.add('is-playing');logo.playing();
+          }
           if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}
         },
-        onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the poster, never YouTube's error screen
+        onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the logo, never YouTube's error screen
       }
     });
   });
@@ -1874,13 +1966,13 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
   h.classList.toggle('hide',y>ly&&y>330&&!navlinks.classList.contains('open')&&!document.body.classList.contains('vf-in'));ly=y;},{passive:true});
 
 /* ================= PRELOADER =================
-   Genuinely waits for every image the site uses, plus fonts.
-   The logo draws in proportion to real progress. Never hangs:
+   Waits for the pen artwork and fonts. Other media loads as needed.
+   The bar follows real readiness; the pen draws at a brisk fixed pace.
+   Never hangs:
    errors count as done and a hard timeout releases the page.       */
 (function(){
   const pre=document.getElementById('pre'),
-        track=document.getElementById('ptrack'),
-        fill=document.getElementById('lfill');
+        track=document.getElementById('ptrack');
 
   if(document.documentElement.classList.contains('seen')){   // already played in this tab
     document.body.classList.remove('locked');
@@ -1889,7 +1981,8 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
     return;
   }
 
-  const TOTAL=2;                     // the home photo, plus the webfonts; the rest load as they come into view
+  const pen=CBPenLoader.mount(pre.querySelector('.cb-slot'),{speed:5,label:'Chaar Bhai. Site loading.'});
+  const TOTAL=2;                     // the pen assets and webfonts; photos load as needed
   let done=0, real=0, shown=0, finished=false;
   const t0=performance.now();
   let last=t0;
@@ -1897,17 +1990,11 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
 
   const tick=()=>{ done++; real=Math.min(done/TOTAL,1); };
 
-  {
-    const im=new Image(), f=PICKS.hero;
-    im.onload=tick; im.onerror=tick;   // a missing file must not stall the site
-    im.sizes='100vw'; im.srcset=f.ws.map(w=>`${f.src}-${w}.webp ${w}w`).join(', ');   // the same copy the page will use
-    im.src=`${f.src}-${f.ws[0]}.webp`;
-  }
+  pen.ready.then(tick,tick);
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(tick,tick);
 
   function paint(p){
-    // the logo fills in from the bottom as the site loads
-    fill.style.clipPath=`inset(${(1-p)*100}% 0 0 0)`;
+    // The bar reports real readiness independently of the pen animation.
     track.style.transform=`scaleX(${p})`;
   }
 
@@ -1920,10 +2007,11 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
     if(!finished&&shown>=1&&elapsed>MIN_MS){
       finished=true;
       try{sessionStorage.setItem('cb-loaded','1')}catch(e){}
+      pen.finish();pre.setAttribute('aria-busy','false');
       pre.classList.add('gone');
       document.body.classList.remove('locked');
       go();
-      afterTransition(pre,600).then(preGoneResolve);
+      afterTransition(pre,600).then(()=>{pen.destroy();preGoneResolve()});
       return;
     }
     requestAnimationFrame(frame);

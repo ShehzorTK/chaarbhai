@@ -62,15 +62,13 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 
 
 <!-- ============ PRELOADER ============ -->
-<div id="pre">
+<div id="pre" role="status" aria-label="Chaar Bhai. Site loading." aria-busy="true">
   <div class="wrap">
-    <div class="logo-build" id="lbuild">
-      <img class="ghost" id="logosrc" src="img/logo.png" alt="">
-      <img class="fill" id="lfill" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Chaar Bhai">
-    </div>
+    <div class="cb-slot" aria-hidden="true"></div>
     <div class="track"><i id="ptrack"></i></div>
   </div>
 </div>
+
 
 <header id="hdr">
   <a href="#/" class="brand" data-nav aria-label="Chaar Bhai, home">
@@ -128,6 +126,7 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 <script src="videos.js"></script>
 <script src="video-feed.js"></script>
 <script src="reviews.js"></script>
+<script src="pen-loader.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

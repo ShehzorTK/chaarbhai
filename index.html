@@ -55,7 +55,7 @@ try{if(sessionStorage.getItem('cb-loaded')==='1')document.documentElement.classL
    never flashes the other theme. Dark is the house default. */
 try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}
 </script>
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=39.1">
 </head>
 <body class="locked">
 <button class="skip" type="button" id="skip">Skip to content</button>
@@ -64,7 +64,10 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 <!-- ============ PRELOADER ============ -->
 <div id="pre" role="status" aria-label="Chaar Bhai. Site loading." aria-busy="true">
   <div class="wrap">
-    <div class="cb-slot" aria-hidden="true"></div>
+    <div class="logo-build" id="lbuild" aria-hidden="true">
+      <img class="ghost" id="logosrc" src="img/logo.png" alt="">
+      <img class="fill" id="lfill" src="img/logo.png" alt="">
+    </div>
     <div class="track"><i id="ptrack"></i></div>
   </div>
 </div>
@@ -122,11 +125,11 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 </footer>
 
 <script>if(/[?&]debug\b/.test(location.search))document.write('<script src="debug.js"><\/script>')</script>
-<script src="portfolio.js?v=39"></script>
-<script src="videos.js?v=39"></script>
-<script src="video-feed.js?v=39"></script>
-<script src="reviews.js?v=39"></script>
-<script src="pen-loader.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="portfolio.js?v=39.1"></script>
+<script src="videos.js?v=39.1"></script>
+<script src="video-feed.js?v=39.1"></script>
+<script src="reviews.js?v=39.1"></script>
+<script src="pen-loader.js?v=39.1"></script>
+<script src="app.js?v=39.1"></script>
 </body>
 </html>

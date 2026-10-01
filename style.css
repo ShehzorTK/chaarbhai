@@ -1035,14 +1035,10 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
       .cb-loader{transition:none}
     }
 
-/* One shared pen mark, sized for each loading surface. */
+/* The pen mark is reserved for the first Home visit. */
 .cb-loader{pointer-events:none;z-index:1}
 .cb-loader .cb-art{width:min(var(--cb-logo-width),78vw,95vh);width:min(var(--cb-logo-width),78vw,95svh)}
-#pre .cb-loader{--cb-logo-width:430px;z-index:0}
 #pre .wrap,#wkpre .wrap{position:relative;z-index:2}
-#pre .cb-slot,#wkpre .cb-slot{position:relative;width:clamp(210px,40vw,430px);aspect-ratio:2048/981}
-#pre .cb-loader,#wkpre .cb-loader{--cb-logo-width:430px;background:transparent}
-#pre .cb-loader .cb-art,#wkpre .cb-loader .cb-art{width:100%}
 
 /* The available space follows the actual headline and body height. */
 .vhero-media{background:#12141C}
@@ -1051,7 +1047,6 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
 .vhero .cb-loader{--cb-background:transparent;--cb-logo-width:840px}
 .vhero .cb-hero-placeholder.is-leaving{opacity:0;pointer-events:none}
 @media(max-width:600px){
-  #pre .cb-loader .cb-art{width:min(430px,78vw)}
   .vhero .cb-loader .cb-art,.vhero .cb-hero-placeholder>img{width:min(86vw,calc(100cqh * 2.087))}
 }
 @media(prefers-reduced-motion:reduce){.vhero .cb-hero-placeholder{transition:none}}
@@ -1059,9 +1054,13 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
 /* The global img display rule must not reveal the static fallback during drawing. */
 .vhero .cb-hero-placeholder>img[hidden]{display:none}
 
-/* Keep the whole YouTube mount hidden, including its unstyled startup iframe. */
-.vhero-player{position:absolute;inset:0;overflow:hidden;visibility:hidden;pointer-events:none}
-.vhero-player.is-playing{visibility:visible}
+/* Keep the iframe rendered for muted autoplay; an opaque cover hides startup UI. */
+.vhero-player{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.vhero-player .vhero-yt{opacity:1}
+.cb-video-cover{position:absolute;inset:0;z-index:1;background:var(--ink);transition:opacity .35s ease;pointer-events:none}
+.cb-video-cover.is-leaving{opacity:0}
+.vhero .cb-hero-placeholder{z-index:2}
+@media(prefers-reduced-motion:reduce){.cb-video-cover{transition:none}}
 .vhero-player iframe{position:absolute;top:50%;left:50%;border:0;pointer-events:none;background:transparent;
   width:max(100cqw,calc(100cqh*16/9));height:max(100cqh,calc(100cqw*9/16));
   transform:translate(-50%,-50%) scale(1.16)}

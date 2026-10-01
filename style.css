@@ -85,6 +85,10 @@ header,footer,#pre,#wkpre{--ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rg
   --soft:rgba(239,234,223,.54);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
   --line-2:rgba(239,234,223,.22);--gline:rgba(206,192,163,.34);--hdr:rgba(18,20,28,.94);color:var(--paper)}
 footer{background:var(--ink)}
+/* light mode: the footer is paper with dark type and the dark mark (Contact keeps it night navy) */
+:root[data-theme="light"]:not(.on-contact) footer{--ink:#F4F0E7;--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42)}
+:root[data-theme="light"]:not(.on-contact) footer .fm img{content:url(img/logo-dark.png)}
+html.on-contact #themesw{display:none}   /* Contact ignores the theme switch, so the switch is not offered there */
 .vhero{--paper:#EFEADF;--dim:rgba(239,234,223,.78);--soft:rgba(239,234,223,.66);--gold:#CEC0A3;--gold-hi:#E6D9B8;--ink:#12141C;color:var(--paper)}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -173,7 +177,7 @@ header::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:no
 header.solid::before{opacity:1}
 /* on paper the bar is always there, so the navy mark never sits on a photograph */
 :root[data-theme="light"] header:not(.over-hero)::before,:root[data-theme="light"] header.solid:not(.over-hero)::before{opacity:1}
-:root[data-theme="light"] header.over-hero::before{opacity:0}   /* a solid navy bar over the paper page, but not over the Home hero (app.js heroNav) */
+:root[data-theme="light"] header.over-hero::before{opacity:1;background:linear-gradient(to bottom,rgba(244,240,231,.62),rgba(244,240,231,0));box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}   /* over the Home hero the bar is only a soft pale shade, so the nav stays readable */   /* a solid navy bar over the paper page, but not over the Home hero (app.js heroNav) */
 /* light mode: the nav is a pale bar with dark type and the dark mark, everywhere except over the Home hero, Contact (night navy in either theme),
    the Films feed and the open mobile menu. Work's stage tints the bar further down. */
 :root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header{--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
@@ -1175,7 +1179,8 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 /* The hero follows the selected theme, including the waiting mark and copy. */
 :root[data-theme="light"] .vhero{--ink:#F4F0E7;--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-hi:#57492D;color:var(--paper)}
 .vhero .vhero-media{background:var(--ink)}
-:root[data-theme="light"] .vhero-media::after{background:linear-gradient(to top,rgba(244,240,231,.55) 0,rgba(244,240,231,.28) 20%,transparent 40%)}   /* a soft pale shade under the copy only */
+:root[data-theme="light"] .vhero-media::after{background:linear-gradient(to top,rgba(244,240,231,.58) 0,rgba(244,240,231,.34) 30%,transparent 58%)}   /* a soft pale shade under the copy only */
 /* Preserve every original logo colour; contrast comes from a small shadow. */
 :root[data-theme="light"] .vhero .cb-hero-placeholder>img{content:url(img/logo-dark.png)}   /* light mode: the dark mark, maple leaf still red */
 .cb-logo-flight img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+:root[data-theme="light"]:not(.on-contact) footer .credit-logo{filter:brightness(0);opacity:.6}   /* the white credit mark turns dark on the paper footer */

@@ -701,7 +701,7 @@ syncThemeUI();
 themeSw.addEventListener('click',()=>{
   const root=document.documentElement,light=!isLight();
   if(light)root.dataset.theme='light';else delete root.dataset.theme;
-  try{localStorage.setItem('cb-theme',light?'light':'dark')}catch(e){}
+  try{sessionStorage.setItem('cb-theme',light?'light':'dark')}catch(e){}
   syncThemeUI();
   track('theme_switch',{theme:light?'light':'dark'});
 });

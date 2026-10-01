@@ -882,6 +882,7 @@ function sequences(seqs){
     let shown=0;
     const step=()=>frames[1]?frames[1].offsetLeft-frames[0].offsetLeft:frames[0].offsetWidth+16;
     const upd=()=>{
+      if(!strip.isConnected||!step())return;                // the slide was cooled (emptied) while this was queued
       const max=strip.scrollWidth-strip.clientWidth;
       const i=Math.max(1,Math.min(total,Math.round(strip.scrollLeft/step())+1));
       if(i!==shown){

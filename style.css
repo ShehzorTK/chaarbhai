@@ -807,9 +807,8 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 html.on-work{scroll-snap-type:y proximity}
 html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
 /* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
-:root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--hov,var(--tint,var(--hdr)));-webkit-backdrop-filter:none;backdrop-filter:none}
+:root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--tint,var(--hdr));-webkit-backdrop-filter:none;backdrop-filter:none}
 .pro{box-sizing:border-box;min-height:calc(100svh - 104px);scroll-snap-align:start;
-  background:var(--hov,var(--ink));transition:background-color .8s var(--quint);
   padding:calc(var(--hh,84px) + clamp(24px,5svh,56px)) var(--pad) clamp(14px,2.4svh,28px)}
 .pro-in{max-width:1180px;margin:0 auto;transition:opacity .3s var(--ease)}
 .pro.tucked .pro-in{opacity:0}
@@ -833,17 +832,16 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 
 .ps{--psb:48px;--ps-h0:calc(100svh - var(--hh,84px));--ps-sh:calc((var(--ps-h0) - var(--psb)) * .84);--ps-chrome:196px;
   --fh:max(150px,calc(var(--ps-sh) - var(--ps-chrome)));
-  position:relative;height:var(--ps-h0);overflow:hidden;color:var(--paper);
-  background:var(--hov,var(--tint,var(--ink)));transition:background-color .8s var(--quint);
-  scroll-snap-align:start;scroll-margin-top:var(--hh,84px)}
-.ps-bar{position:absolute;top:0;left:0;right:0;height:var(--psb);display:flex;align-items:center;z-index:2}   /* no ground of its own: the stage's tint and glow run behind it (the feed below is clipped at the bar's edge, nothing slides under it) */
+  position:relative;isolation:isolate;color:var(--paper);
+  background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}
+html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
+/* the category line sticks under the header; it has the ground's colour because slides scroll beneath it */
+.ps-bar{position:sticky;top:var(--hh,84px);height:var(--psb);display:flex;align-items:center;z-index:3;
+  background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}
 .ps-bar .cl{flex:1;min-width:0}
-.ps-feed{position:absolute;left:0;right:0;top:var(--psb);bottom:0;overflow-y:auto;overflow-x:hidden;
-  scroll-snap-type:y mandatory;touch-action:pan-y;scrollbar-width:none}   /* no overscroll-behavior: at its first or last slide the swipe carries on to the page, so you can always scroll back up to the prologue and the header */
-.ps-feed::-webkit-scrollbar{display:none}
-.ps-feed:focus-visible{outline:1px solid var(--gold);outline-offset:-3px}
+.ps-feed{position:relative;z-index:1}
 .ps-slide{box-sizing:border-box;height:var(--ps-sh);padding-top:clamp(16px,2.6svh,26px);display:flex;flex-direction:column;
-  scroll-snap-align:start;scroll-snap-stop:always}
+  scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:calc(var(--hh,84px) + var(--psb))}
 .ps-end{height:calc((var(--ps-h0) - var(--psb)) * .16)}
 .ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
 /* the one uppercase label style: the category line and a couple's tags. Nothing else on the stage is uppercase. */
@@ -852,15 +850,16 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps-body{flex:1 1 auto;min-height:0;margin-top:12px;display:flex;flex-direction:column}
 .ps .seq-strip{flex:0 0 auto;padding:8px var(--pad);scroll-padding-inline:var(--pad);overflow-y:hidden;overscroll-behavior-x:contain;gap:20px}
 .ps .frame{flex:0 0 auto;width:min(calc(var(--fh) * var(--ar,.75)),calc(100vw - 2 * var(--pad) - 4px))}
+.ps .frame{position:relative}   /* the hidden caption is absolutely placed: its box must be inside the strip so the strip clips it */
 .ps .frame .fr-img{width:100%}
-/* The tinted ground (dark mode only): --tint is the current story's ground, --hov a mouse preview. Chrome, gold and type never change. */
-:root[data-theme="light"] .ps,:root[data-theme="light"] .pro{background:var(--ink)}
+/* The tinted ground (dark mode only): --tint is the current story's ground. Gold, type and the logo never change. */
+:root[data-theme="light"] .ps,:root[data-theme="light"] .ps-bar{background:var(--ink)}
 :root[data-theme="light"] .ps-glow{display:none}
 /* the glow: one layer, a pre-painted soft circle (a mask, no blur, no blend modes) moved by transform only */
-.ps-glow{position:absolute;left:0;top:0;width:70vmax;height:70vmax;z-index:0;pointer-events:none;opacity:.09;
-  background-color:var(--hov-glow,var(--glow,transparent));transition:background-color .8s var(--quint);will-change:transform;
+.ps-glowwrap{position:sticky;top:0;height:100svh;margin-bottom:-100svh;overflow:hidden;pointer-events:none;z-index:0}
+.ps-glow{position:absolute;left:0;top:0;width:70vmax;height:70vmax;pointer-events:none;opacity:.09;
+  background-color:var(--glow,transparent);transition:background-color .8s var(--quint);will-change:transform;
   -webkit-mask-image:radial-gradient(closest-side,#000,transparent);mask-image:radial-gradient(closest-side,#000,transparent)}
-.ps-feed{z-index:1}
 @media (hover:none){
   .ps-glow{transition:background-color .8s var(--quint),transform 1.4s var(--quint);animation:psDrift 24s ease-in-out infinite alternate}
   .ps.glow-off .ps-glow{animation-play-state:paused}
@@ -904,7 +903,7 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
   .ul[data-on]{transition:none}
   .wk-tog a:active,.cl-b:active,.ps-arrows button:active,.pro-row:active .pro-n{transform:none}
   .ps .frame .fr-img:hover img{transform:none}
-  .ps,.pro,.ps-glow,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
+  .ps,.ps-bar,.ps-glow,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
   .ps-glow{animation:none}
 }
 /* a phone on its side: no peek, the whole stage is the slide, and the small print goes */
@@ -985,7 +984,7 @@ header{flex-wrap:wrap}
   padding:0;border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
 .vf-bar .cl{flex:1;min-width:0}
 .vf-feed{position:absolute;left:0;right:0;top:var(--vfb);bottom:0;overflow-y:auto;overflow-x:hidden;
-  scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+  scroll-snap-type:y mandatory;scrollbar-width:none}   /* no overscroll-behavior: at the first or last film a swipe carries on to the page, so you can always scroll back up to the menu */
 .vf-feed::-webkit-scrollbar{display:none}
 .vf-slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
   display:flex;flex-direction:column;align-items:center;justify-content:center}

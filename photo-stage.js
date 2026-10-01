@@ -1,4 +1,5 @@
-/* Work page, Photographs view: a stage that snaps one couple at a time.
+/* Work page, Photographs view: a stage that snaps one couple at a time. It is part of the page, not a scroller of its own,
+   so the wheel, a swipe or the keys scroll it the same wherever the pointer is, and scrolling back up always reaches the prologue.
    A slide is about 84% of the stage, so the next couple peeks in underneath. Only the active slide and its two
    neighbours hold a strip and real pictures (the page killed iPhone Safari before, see app.js photoWindow);
    every other slide is its heading and an empty box of the same height.
@@ -73,9 +74,9 @@ function html(){
   const data=flat();if(data.length<2)return '';
   const cats=[];data.forEach((d,i)=>{const k=catIndex(d.c);if(!cats.some(x=>x[0]===k))cats.push([k,i])});
   return prologueHTML()+`<div class="ps wk-in" id="ps" data-n="${data.length}">
+  <div class="ps-glowwrap" aria-hidden="true"><i class="ps-glow"></i></div>
   <div class="ps-bar">${VF.catLineHTML(cats,'Jump to a category of photographs')}</div>
-  <i class="ps-glow" aria-hidden="true"></i>
-  <div class="ps-feed" tabindex="0" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
+  <div class="ps-feed" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
     ?`<article class="ps-slide ps-open" data-i="${i}" aria-label="${esc(d.c.name)}">${openerHTML(d)}</article>`
     :`<article class="seq ps-slide" data-i="${i}" data-label="${esc([d.q.couple,...d.q.tags].join(' · '))}" aria-label="${esc(d.q.couple+', '+d.c.name)}">${headHTML(d)}<div class="ps-body"></div></article>`).join('')}
     <div class="ps-end" aria-hidden="true"></div></div>
@@ -83,31 +84,25 @@ function html(){
 </div>`;
 }
 
-/* The ground's tint. Each slide carries a final ground colour and a glow colour (chapter colour, nudged toward the couple's
-   own when it has one); build_portfolio.py / tints.py make them. The stage sets two CSS variables when a slide settles and the
-   CSS eases the background (800ms, ease-out quint). Preview colours on hover (mouse only) use --hov and are removed on leave. */
+/* The ground's tint. Each slide carries a final ground colour and a glow colour (tints.py makes them). The stage sets two CSS
+   variables on the page when a slide settles and the CSS eases the background (800ms, ease-out quint). Only the couple on
+   screen sets it: hovering a category, a contents row or a photograph changes nothing. */
 const tintOf=d=>(d.q&&d.q.t)||d.c.tint||null;
-const hoverTintOf=d=>(d.q&&d.q.th)||d.c.tint||null;
 function setTint(t){
   if(!S)return;
   const st=S.host.style;
   if(t){st.setProperty('--tint',t.g);st.setProperty('--glow',t.l)}else{st.removeProperty('--tint');st.removeProperty('--glow')}
 }
-function hoverTint(t){
-  if(!S)return;
-  const st=S.host.style;
-  if(t){st.setProperty('--hov',t.g);st.setProperty('--hov-glow',t.l)}else{st.removeProperty('--hov');st.removeProperty('--hov-glow')}
-}
 
-/* The glow: one soft pool of light on the ground, behind the photographs. One composited layer moved by transform only.
+/* The glow: one soft pool of light on the ground, behind the photographs. One composited layer moved by transform only;
+   it lives in a sticky wrapper the size of the screen, so its coordinates are screen coordinates.
    Mouse: it chases the pointer (about 1s) in a rAF loop that sleeps when it has arrived and when the tab is hidden.
    Phone: no pointer, so it sits low in the middle and slides sideways with the story (set on slide change), plus a
    very slow drift in CSS. No gyroscope. Reduced motion: it stays at rest. */
 function glowRest(){
-  const g=S.glow;if(!g)return;
-  S.gw=g.offsetWidth||0;
-  const w=S.root.clientWidth,h=S.root.clientHeight;
-  S.gx=S.tx=w*.5;S.gy=S.ty=S.fine?h*.45:h*.82;
+  if(!S||!S.glow)return;
+  S.gw=S.glow.offsetWidth||0;
+  S.gx=S.tx=innerWidth*.5;S.gy=S.ty=S.fine?innerHeight*.45:innerHeight*.82;
   glowPlace();
 }
 function glowPlace(){S.glow.style.transform='translate3d('+(S.gx-S.gw/2).toFixed(1)+'px,'+(S.gy-S.gw/2).toFixed(1)+'px,0)'}
@@ -121,14 +116,14 @@ function glowTick(t){
   S.raf=requestAnimationFrame(glowTick);
 }
 function glowMove(e){
-  const r=S.root.getBoundingClientRect();
-  S.tx=e.clientX-r.left;S.ty=e.clientY-r.top;
+  if(!S||!S.inStage)return;
+  S.tx=e.clientX;S.ty=e.clientY;
   if(!S.chase&&!document.hidden){S.chase=1;S.gt=0;S.raf=requestAnimationFrame(glowTick)}
 }
 function glowStory(i){
   if(S.fine||S.reduce)return;
-  const w=S.root.clientWidth,p=S.data.length>1?i/(S.data.length-1):0;
-  S.gx=w*(.2+.6*p);glowPlace();
+  const p=S.data.length>1?i/(S.data.length-1):0;
+  S.gx=innerWidth*(.2+.6*p);glowPlace();
 }
 
 function warm(i){
@@ -159,104 +154,94 @@ function activate(i){
   if(window.cbLog)cbLog('ps active '+i+', live '+S.slides.filter(e=>e._live).length);
 }
 
-/* open on a category (by chapter id, e.g. "henna"), or on the first couple. Always lands at once, no scroll animation. */
-function go(id,keepActive){
+/* where the page must be scrolled for slide i to sit just under the header and the category line */
+const headH=()=>{const h=document.getElementById('hdr');return h?h.offsetHeight:0};
+const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.offsetHeight;
+
+/* open on a category (by chapter id, e.g. "henna"), or on the first couple. Lands at once, no scroll animation. */
+function go(id,smooth){
   if(!S)return;
   let i=0;
   if(id){const k=S.data.findIndex(d=>d.c.id===id);if(k>=0)i=k}
-  S.feed.scrollTo({top:S.slides[i].offsetTop,behavior:'instant'});
-  activate(i);
+  if(id||smooth)scrollTo({top:slideTop(i),behavior:smooth&&!S.reduce?'smooth':'instant'});   // no chapter asked for: stay on the prologue
+  if(!smooth)activate(i);
 }
+
+/* what the page's position means for the stage: is it under the header, should it snap, has the prologue tucked away.
+   One cheap read per frame while the page scrolls. */
+function measure(){
+  S.tick=0;
+  if(!S||S.root.offsetParent===null)return;
+  const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
+  S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
+  S.tucked=r.top<=vh*.5;
+  document.body.classList.toggle('vf-in',S.inStage);
+  if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
+  /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
+  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
+  S.root.classList.toggle('glow-off',r.bottom<0||r.top>vh);
+  const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
+}
+function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
+
+function observe(){
+  if(S.io)S.io.disconnect();
+  const top=headH()+S.bar.offsetHeight;
+  S.io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=0.6)S.cand=+e.target.dataset.i});
+    clearTimeout(S.deb);
+    S.deb=setTimeout(()=>{if(S&&S.cand>=0)activate(S.cand)},90);     // not while a fling is still going past
+  },{rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
+  S.slides.forEach(el=>S.io.observe(el));
+}
+function onResize(){if(!S)return;glowRest();observe();onScroll()}
 
 function mount(then){
   unmount();
   const root=document.getElementById('ps');if(!root)return;
   const data=flat();
-  S={root,data,feed:$('.ps-feed',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
+  S={root,data,bar:$('.ps-bar',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
      reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,active:-1,cand:-1,deb:0,
      host:document.documentElement,glow:$('.ps-glow',root),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
   S.slides.forEach(el=>{el.inert=true});
   glowRest();
   if(S.fine&&!S.reduce){
-    S.onMove=glowMove;S.onVis=()=>{if(document.hidden){cancelAnimationFrame(S.raf);S.chase=0;S.gt=0}else if(S.gx!==S.tx||S.gy!==S.ty){S.chase=1;S.raf=requestAnimationFrame(glowTick)}};
-    root.addEventListener('pointermove',S.onMove,{passive:true});
+    S.onVis=()=>{if(document.hidden){cancelAnimationFrame(S.raf);S.chase=0;S.gt=0}else if(S.gx!==S.tx||S.gy!==S.ty){S.chase=1;S.raf=requestAnimationFrame(glowTick)}};
+    addEventListener('pointermove',glowMove,{passive:true});
     document.addEventListener('visibilitychange',S.onVis);
   }
-  addEventListener('resize',glowRest,{passive:true});
-  /* mouse only: a category word or contents row previews that chapter's tint, a photograph nudges toward its couple's */
-  if(S.fine){
-    const over=e=>{
-      const t=e.target.closest&&e.target.closest('.cl-b,.pro-row,.fr-img');if(!t||t.contains(e.relatedTarget))return;
-      if(t.classList.contains('cl-b'))hoverTint(S.data[+t.dataset.first].c.tint||null);
-      else if(t.classList.contains('pro-row')){const c=CHAPTERS.find(c=>c.id===t.dataset.ch);hoverTint(c&&c.tint||null)}
-      else{const sl=t.closest('.ps-slide');if(sl)hoverTint(hoverTintOf(S.data[+sl.dataset.i]))}
-    };
-    const out=e=>{const t=e.target.closest&&e.target.closest('.cl-b,.pro-row,.fr-img');if(t&&!t.contains(e.relatedTarget))hoverTint(null)};
-    S.hov=[document.getElementById('pro'),root].filter(Boolean);
-    S.hov.forEach(n=>{n.addEventListener('mouseover',over);n.addEventListener('mouseout',out)});
-    S.hovFns=[over,out];
-  }
-  S.io=new IntersectionObserver(es=>{
-    es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=0.6)S.cand=+e.target.dataset.i});
-    clearTimeout(S.deb);
-    S.deb=setTimeout(()=>{if(S&&S.cand>=0)activate(S.cand)},90);     // not while a fling is still going past
-  },{root:S.feed,threshold:[0.6]});
-  S.slides.forEach(el=>S.io.observe(el));
-  /* while the stage is on screen the header (and its switch) stays, like the Films feed. Once it sits flush under the
-     header the prologue has tucked behind it: its text fades out (opacity only, a class, no scroll-driven CSS). */
-  const pro=document.getElementById('pro');
-  S.vio=new IntersectionObserver(es=>{
-    const r=es[es.length-1].intersectionRatio,on=r>=0.5;
-    document.body.classList.toggle('vf-in',on);
-    if(on){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
-    if(root.offsetParent!==null)S.tucked=r>=0.9;
-    root.classList.toggle('glow-off',r===0);                 // out of sight: the drift stops
-    if(pro&&root.offsetParent!==null)pro.classList.toggle('tucked',r>=0.9);
-  },{threshold:[0,0.5,0.9]});
-  S.vio.observe(root);
+  addEventListener('resize',onResize,{passive:true});
+  addEventListener('scroll',onScroll,{passive:true});
+  observe();
   root.addEventListener('click',e=>{
     const b=e.target.closest('.cl-b');if(!b)return;
-    go(S.data[+b.dataset.first].c.id);
+    go(S.data[+b.dataset.first].c.id,true);
   });
   /* the contents list is the way in: open the stage on that chapter */
-  if(pro)S.proClick=e=>{
-    const b=e.target.closest('.pro-row');if(!b)return;
-    go(b.dataset.ch);
-    scrollTo({top:stageTop(),behavior:S.reduce?'instant':'smooth'});
-  };
-  if(pro)pro.addEventListener('click',S.proClick);
+  const pro=document.getElementById('pro');
+  if(pro){S.proClick=e=>{const b=e.target.closest('.pro-row');if(b)go(b.dataset.ch,true)};pro.addEventListener('click',S.proClick)}
   go(then);
-  /* arriving on a chosen category (from Home): bring the stage up under the header as well, no prologue */
-  if(then)align();
+  measure();
 }
 function unmount(){
   if(!S)return;
-  clearTimeout(S.deb);S.io.disconnect();S.vio.disconnect();
+  clearTimeout(S.deb);if(S.io)S.io.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
-  ['--tint','--glow','--hov','--hov-glow'].forEach(k=>S.host.style.removeProperty(k));
-  cancelAnimationFrame(S.raf);removeEventListener('resize',glowRest);
+  ['--tint','--glow'].forEach(k=>S.host.style.removeProperty(k));
+  cancelAnimationFrame(S.raf);
+  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('pointermove',glowMove);
   if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
-  if(S.hov)S.hov.forEach(n=>{n.removeEventListener('mouseover',S.hovFns[0]);n.removeEventListener('mouseout',S.hovFns[1])});
+  document.documentElement.classList.remove('snap-y');
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');
 }
-/* the stage's top edge just under the header, so it fills the screen */
-function stageTop(){
-  const hdr=document.getElementById('hdr');
-  return Math.max(0,S.root.getBoundingClientRect().top+scrollY-(hdr?hdr.offsetHeight:0));
-}
-function align(){
-  if(!S)return;
-  scrollTo({top:stageTop(),behavior:'instant'});
-}
-/* coming back from Films: the hidden stage lost its scroll position. Only bring the stage up again if it was up before. */
+/* coming back from Films: the hidden stage lost its place. Only bring the stage up again if it was up before. */
 function restore(){
   if(!S||S.root.offsetParent===null)return;
-  const i=Math.max(0,S.active);
-  S.feed.scrollTo({top:S.slides[i].offsetTop,behavior:'instant'});
-  if(S.tucked)align();
+  if(S.tucked)scrollTo({top:slideTop(Math.max(0,S.active)),behavior:'instant'});
+  glowRest();observe();measure();
   VF.syncUL();
 }
 
-window.PS={html,mount,unmount,restore,align};
+window.PS={html,mount,unmount,restore};
 })();

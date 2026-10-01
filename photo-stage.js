@@ -74,7 +74,7 @@ function html(){
   const data=flat();if(data.length<2)return '';
   const cats=[];data.forEach((d,i)=>{const k=catIndex(d.c);if(!cats.some(x=>x[0]===k))cats.push([k,i])});
   return prologueHTML()+`<div class="ps wk-in" id="ps" data-n="${data.length}">
-  <div class="ps-glowwrap" aria-hidden="true"><i class="ps-ground"></i><i class="ps-glow"></i></div>
+  <div class="ps-groundwrap" aria-hidden="true"><i class="ps-ground"></i></div>
   <div class="ps-bar">${VF.catLineHTML(cats,'Jump to a category of photographs')}</div>
   <div class="ps-feed" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
     ?`<article class="ps-slide ps-open" data-i="${i}" aria-label="${esc(d.c.name)}">${openerHTML(d)}</article>`
@@ -84,7 +84,7 @@ function html(){
 </div>`;
 }
 
-/* The ground's tint. Each slide carries a final ground colour and a glow colour (tints.py makes them). The stage sets two CSS
+/* The ground's tint. Each slide carries a final ground colour (tints.py makes them). The stage sets one CSS
    variables on the page when a slide settles and the CSS eases the background (800ms, ease-out quint). Only the couple on
    screen sets it: hovering a category, a contents row or a photograph changes nothing. */
 /* only a couple's slide has a colour (its own, else its chapter's): the prologue and the chapter openers stay the site's navy */
@@ -92,7 +92,7 @@ const tintOf=d=>d.open?null:((d.q&&d.q.t)||d.c.tint||null);
 function setTint(t){
   if(!S||S.notint)return;
   const st=S.host.style;
-  if(t){st.setProperty('--tint',t.g);st.setProperty('--glow',t.l)}else{st.removeProperty('--tint');st.removeProperty('--glow')}
+  if(t){st.setProperty('--tint',t.g)}else{st.removeProperty('--tint')}
 }
 
 /* the ground only takes the colour while the stage is up under the header; the menu above it stays navy */
@@ -101,38 +101,6 @@ function applyTint(){
   const t=S.inStage?S.tintNow:null,k=t?t.g:'';
   if(S.tintApplied===k)return;
   S.tintApplied=k;setTint(t);
-}
-
-/* The glow: one soft pool of light on the ground, behind the photographs. One composited layer moved by transform only;
-   it lives in a sticky wrapper the size of the screen, so its coordinates are screen coordinates.
-   Mouse: it chases the pointer (about 1s) in a rAF loop that sleeps when it has arrived and when the tab is hidden.
-   Phone: no pointer, so it sits low in the middle and slides sideways with the story (set on slide change), plus a
-   very slow drift in CSS. No gyroscope. Reduced motion: it stays at rest. */
-function glowRest(){
-  if(!S||!S.glow)return;
-  S.gw=S.glow.offsetWidth||0;
-  S.gx=S.tx=innerWidth*.5;S.gy=S.ty=S.fine?innerHeight*.45:innerHeight*.82;
-  glowPlace();
-}
-function glowPlace(){if(!S.glow)return;S.glow.style.transform='translate3d('+(S.gx-S.gw/2).toFixed(1)+'px,'+(S.gy-S.gw/2).toFixed(1)+'px,0)'}
-function glowTick(t){
-  if(!S||!S.chase)return;
-  const dt=Math.min(64,t-(S.gt||t));S.gt=t;
-  const k=1-Math.exp(-dt/320);
-  S.gx+=(S.tx-S.gx)*k;S.gy+=(S.ty-S.gy)*k;
-  glowPlace();
-  if(Math.abs(S.tx-S.gx)<.5&&Math.abs(S.ty-S.gy)<.5){S.gx=S.tx;S.gy=S.ty;glowPlace();S.chase=0;S.gt=0;return}
-  S.raf=requestAnimationFrame(glowTick);
-}
-function glowMove(e){
-  if(!S||!S.inStage)return;
-  S.tx=e.clientX;S.ty=e.clientY;
-  if(!S.chase&&!document.hidden){S.chase=1;S.gt=0;S.raf=requestAnimationFrame(glowTick)}
-}
-function glowStory(i){
-  if(!S.glow||S.fine||S.reduce)return;
-  const p=S.data.length>1?i/(S.data.length-1):0;
-  S.gx=innerWidth*(.2+.6*p);glowPlace();
 }
 
 function warm(i){
@@ -157,7 +125,7 @@ function activate(i){
   const lo=Math.min(i,pv<0?i:pv)-1,hi=Math.max(i,pv<0?i:pv)+1;
   for(let k=Math.max(0,lo);k<=Math.min(S.slides.length-1,hi);k++){if(Math.abs(k-i)<=1)warm(k);else cool(k)}
   const d=S.data[i];
-  S.tintNow=tintOf(d);applyTint();glowStory(i);
+  S.tintNow=tintOf(d);applyTint();
   VF.markCat(S.root,catIndex(d.c),S.reduce);
   S.live.textContent=d.open?d.c.name:d.q.couple+', '+d.c.name;
   if(window.cbLog)cbLog('ps active '+i+', live '+S.slides.filter(e=>e._live).length);
@@ -187,52 +155,21 @@ function measure(){
   S.tucked=r.top<=vh*.5;
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
+  /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
+  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
-/* The browser snaps (CSS, always on while on Work); a small controller only chooses WHICH snap point a wheel gesture or a key
-   goes to, and the snap does the landing. Without it a gentle scroll (one mouse notch, a light trackpad push) falls back to
-   where it started, because the browser picks the snap point nearest to where the scroll would END. Touch is untouched.
-   A wheel gesture is a run of events less than 100ms apart (momentum included): its first event steps one point, the rest of it
-   is swallowed. At the footer (the last point) a scroll down is left to the page. */
+/* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in
+   measure()); the menu above it scrolls freely. Left and Right step the photographs of the couple on screen. */
 const shown=()=>S&&S.root.offsetParent!==null;
-function tops(){
-  const f=document.querySelector('footer'),max=document.documentElement.scrollHeight-innerHeight;
-  return [0,...S.slides.map((_,i)=>slideTop(i)),f?Math.min(max,f.getBoundingClientRect().top+scrollY):max];
-}
-function step(dir,edge){
-  const T=tops(),y=scrollY,now=performance.now(),fly=S.stepAt&&now-S.stepAt.t<700;
-  let i=0;T.forEach((v,k)=>{if(v<=y+4)i=k});                     // the snap area we are in (the last top at or above the window top)
-  if(fly)i=S.stepAt.i;
-  let to;
-  if(edge)to=T[dir>0?T.length-1:0];
-  else if(dir>0){if(i===T.length-1)return false;to=T[i+1]}      // at the footer: let the page scroll natively
-  else to=!fly&&y>T[i]+4?T[i]:T[Math.max(0,i-1)];               // inside an area (the footer, a tall prologue): back to its top; else the previous point
-  if(Math.abs(to-y)<2&&!fly)return false;
-  S.stepAt={i:T.reduce((m,v,k)=>Math.abs(v-to)<Math.abs(T[m]-to)?k:m,0),t:now};
-  scrollTo({top:to,behavior:S.reduce?'instant':'smooth'});
-  return true;
-}
-function onWheel(e){
-  if(!shown()||e.ctrlKey||!e.deltaY||Math.abs(e.deltaX)>Math.abs(e.deltaY)||document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked'))return;
-  const now=performance.now();
-  if(now-(S.wAt||0)>100)S.wOwn=step(e.deltaY>0?1:-1);      // first event of a gesture
-  S.wAt=now;
-  if(S.wOwn)e.preventDefault();
-}
 function onKey(e){
-  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey)return;
-  const k=e.key,t=e.target;
-  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
+  const k=e.key;
+  if((k!=='ArrowRight'&&k!=='ArrowLeft')||!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!S.inStage||S.active<0)return;
+  const t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||(t.closest&&t.closest('.seq-strip'))))return;   // a focused strip scrolls itself
   if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
-  if(!e.shiftKey&&(k==='ArrowRight'||k==='ArrowLeft')){
-    if(!S.inStage||S.active<0||(t.closest&&t.closest('.seq-strip')))return;   // a focused strip scrolls itself
-    const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
-    if(b&&!b.disabled){e.preventDefault();b.click()}
-    return;
-  }
-  if(t.closest&&t.closest('button,a,[role="button"],.seq-strip')&&(k===' '||k==='Home'||k==='End'))return;   // a focused button keeps its own Space
-  const dir=k==='ArrowDown'||k==='PageDown'||(k===' '&&!e.shiftKey)?1:k==='ArrowUp'||k==='PageUp'||(k===' '&&e.shiftKey)?-1:k==='End'?1:k==='Home'?-1:0;
-  if(dir&&step(dir,k==='Home'||k==='End'))e.preventDefault();
+  const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
+  if(b&&!b.disabled){e.preventDefault();b.click()}
 }
 function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
@@ -246,9 +183,9 @@ function observe(){
   },{rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
   S.slides.forEach(el=>S.io.observe(el));
 }
-function onResize(){if(!S)return;glowRest();observe();onScroll()}
+function onResize(){if(!S)return;observe();onScroll()}
 
-/* ?noglow and ?notint switch the glow layer and the ground tint off, to find which one a browser chokes on (read once, at mount) */
+/* ?notint switches the ground tint off, to find out whether it is what a browser chokes on (read once, at mount) */
 const Q={has:k=>new URLSearchParams(location.search).has(k)};
 function mount(then){
   unmount();
@@ -256,18 +193,10 @@ function mount(then){
   const data=flat();
   S={root,data,bar:$('.ps-bar',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
      reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,active:-1,cand:-1,deb:0,
-     host:document.documentElement,glow:Q.has('noglow')?null:$('.ps-glow',root),notint:Q.has('notint'),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
+     host:document.documentElement,notint:Q.has('notint')};
   S.slides.forEach(el=>{el.inert=true});
-  glowRest();
-  if(S.glow)root.classList.remove('no-glow');else root.classList.add('no-glow');
-  if(S.glow&&S.fine&&!S.reduce){
-    S.onVis=()=>{if(document.hidden){cancelAnimationFrame(S.raf);S.chase=0;S.gt=0}else if(S.gx!==S.tx||S.gy!==S.ty){S.chase=1;S.raf=requestAnimationFrame(glowTick)}};
-    addEventListener('pointermove',glowMove,{passive:true});
-    document.addEventListener('visibilitychange',S.onVis);
-  }
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
-  addEventListener('wheel',onWheel,{passive:false});
   document.addEventListener('keydown',onKey);
   observe();
   root.addEventListener('click',e=>{
@@ -284,10 +213,9 @@ function unmount(){
   if(!S)return;
   clearTimeout(S.deb);if(S.io)S.io.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
-  ['--tint','--glow'].forEach(k=>S.host.style.removeProperty(k));
-  cancelAnimationFrame(S.raf);
-  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('wheel',onWheel);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
-  if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
+  S.host.style.removeProperty('--tint');
+  document.documentElement.classList.remove('snap-y');
+  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');
 }
@@ -295,7 +223,7 @@ function unmount(){
 function restore(){
   if(!S||S.root.offsetParent===null)return;
   scrollTo({top:0,behavior:'instant'});                  // switching tabs lands on the menu
-  glowRest();observe();measure();
+  observe();measure();
   VF.syncUL();
 }
 

@@ -801,11 +801,11 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 /* ============ WORK: PROLOGUE + PHOTOGRAPHS STAGE (photo-stage.js) ============
    Work opens on a prologue (a person talking, then the contents, which is also the way in). Its bottom is cut short on
    purpose so the stage's category line and first couple peek in: that is the cue to scroll once. The page snaps
-   (mandatory, with a snap point on the prologue, every slide and the footer) so one gesture settles the stage flush under the header.
+   (no snapping above the stage, mandatory while the stage fills the screen) so one gesture settles the stage flush under the header.
    The stage snaps one chapter opener or couple at a time like the Films feed; a slide is 84% of the stage, so the next
    one peeks in below it. Photographs stay bare: no stroke, frame or shadow. Depth comes from space. */
-html.on-work{scroll-snap-type:y mandatory}   /* the browser does the scrolling: it snaps to the prologue, every slide and the footer; an area taller than the screen scrolls freely inside */
-html.on-work footer{scroll-snap-align:start}
+html.on-work{scroll-snap-type:none}   /* the menu above the stage scrolls natively, no snapping */
+html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
 html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
 /* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
 :root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--tint,var(--hdr));-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -834,8 +834,6 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps{--psb:48px;--ps-h0:calc(100svh - var(--hh,84px));--ps-sh:calc((var(--ps-h0) - var(--psb)) * .84);--ps-chrome:196px;
   --fh:max(150px,calc(var(--ps-sh) - var(--ps-chrome)));
   position:relative;color:var(--paper)}
-/* ?noglow: no glow layer at all */
-.ps.no-glow .ps-glow{display:none}
 /* the category line sticks under the header; it has the ground's colour because slides scroll beneath it */
 .ps-bar{position:sticky;top:var(--hh,84px);height:var(--psb);display:flex;align-items:center;z-index:3;
   background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}
@@ -855,19 +853,9 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps .frame .fr-img{width:100%}
 /* The tinted ground (dark mode only): --tint is the current story's ground. Gold, type and the logo never change. */
 :root[data-theme="light"] .ps-ground,:root[data-theme="light"] .ps-bar{background:var(--ink)}
-:root[data-theme="light"] .ps-glow{display:none}
-/* the ground: ONE screen-sized layer (never the 60,000px-tall stage), so a colour change repaints one screen. The glow rides on it:
-   a pre-painted radial gradient (no mask, no blur, no blend mode) moved by transform only. --glow-c is a registered colour so
-   the 800ms ease still works on it. */
-@property --glow-c{syntax:'<color>';inherits:false;initial-value:transparent}
-.ps-glowwrap{position:sticky;top:0;height:100svh;margin-bottom:-100svh;overflow:hidden;pointer-events:none;z-index:0}
+/* the ground: ONE screen-sized layer (never the 60,000px-tall stage), so a colour change repaints one screen. Nothing moves on it. */
+.ps-groundwrap{position:sticky;top:0;height:100svh;margin-bottom:-100svh;overflow:hidden;pointer-events:none;z-index:0}
 .ps-ground{position:absolute;inset:0;background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}
-.ps-glow{position:absolute;left:0;top:0;width:70vmax;height:70vmax;pointer-events:none;opacity:.09;
-  --glow-c:var(--glow,transparent);transition:--glow-c .8s var(--quint);will-change:transform;
-  background:radial-gradient(closest-side,var(--glow-c),transparent)}
-@media (hover:none){
-  .ps-glow{transition:--glow-c .8s var(--quint),transform 1.4s var(--quint)}   /* phone: it slides sideways with the story, nothing else moves */
-}
 /* chapter opener: the human voice, seven times a visit, never truncated */
 .ps-open{height:auto;min-height:calc(var(--ps-sh) * .7143);justify-content:center;padding-inline:var(--pad)}
 .ps-open-in{max-width:46rem}
@@ -906,7 +894,7 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
   .ul[data-on]{transition:none}
   .wk-tog a:active,.cl-b:active,.ps-arrows button:active,.pro-row:active .pro-n{transform:none}
   .ps .frame .fr-img:hover img{transform:none}
-  .ps-ground,.ps-bar,.ps-glow,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
+  .ps-ground,.ps-bar,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
 }
 /* a phone on its side: no peek, the whole stage is the slide, and the small print goes */
 @media (orientation:landscape) and (max-height:540px){

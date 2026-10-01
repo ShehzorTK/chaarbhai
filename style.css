@@ -797,58 +797,101 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
   button.irow:hover .thumb img{transform:scale(1.06)}
 }
 
-/* ============ WORK: PHOTOGRAPHS STAGE (photo-stage.js) ============
-   Snaps one couple at a time like the Films feed, but a slide is 84% of the stage, so the next couple peeks in
-   below it. The photos sit in a hairline frame, never edge to edge. */
-.ps{--psb:48px;--ps-h0:calc(100svh - var(--hh,84px));--ps-sh:calc((var(--ps-h0) - var(--psb)) * .84);--ps-chrome:250px;
-  --fh:max(150px,min(58svh,calc(var(--ps-sh) - var(--ps-chrome))));
-  position:relative;height:var(--ps-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line)}
-.ps-bar{position:absolute;top:0;left:0;right:0;height:var(--psb);display:flex;align-items:center;
-  border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
+/* ============ WORK: PROLOGUE + PHOTOGRAPHS STAGE (photo-stage.js) ============
+   Work opens on a prologue (a person talking, then the contents, which is also the way in). Its bottom is cut short on
+   purpose so the stage's category line and first couple peek in: that is the cue to scroll once. The page snaps
+   (proximity, never mandatory) so one gesture settles the stage flush under the header.
+   The stage snaps one chapter opener or couple at a time like the Films feed; a slide is 84% of the stage, so the next
+   one peeks in below it. Photographs stay bare: no stroke, frame or shadow. Depth comes from space. */
+html.on-work{scroll-snap-type:y proximity}
+html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue never ghosts through the header */
+.pro{box-sizing:border-box;min-height:calc(100svh - 104px);scroll-snap-align:start;
+  padding:calc(var(--hh,84px) + clamp(24px,5svh,56px)) var(--pad) clamp(14px,2.4svh,28px)}
+.pro-in{max-width:1180px;margin:0 auto;transition:opacity .3s var(--ease)}
+.pro.tucked .pro-in{opacity:0}
+.pro-h{margin:0;font-family:var(--f-display);font-weight:400;font-size:var(--t-headline);line-height:1.06;letter-spacing:-.015em}
+.pro-p{margin:16px 0 0;max-width:52ch;color:var(--dim);font-size:var(--t-lead);line-height:1.6}
+.pro-list{list-style:none;margin:22px 0 0;padding:0;border-top:1px solid var(--line)}
+.pro-list li{border-bottom:1px solid var(--line)}
+.pro-row{display:grid;grid-template-columns:1fr auto;column-gap:16px;align-items:center;width:100%;min-height:56px;padding:9px 0;text-align:left;
+  color:var(--paper);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pro-n{grid-column:1;font-family:var(--f-serif);font-size:var(--t-name);line-height:1.25;transition:color .15s var(--ease),transform .12s ease-out;transform-origin:left center}
+.pro-a{grid-column:1;color:var(--dim);font-size:var(--t-small);line-height:1.45}
+.pro-c{grid-column:2;grid-row:1/3;color:var(--dim);font-size:var(--t-small);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pro-row:active .pro-n{transform:scale(.97)}
+.pro-row:focus-visible{outline:1px solid var(--gold);outline-offset:4px}
+@media (hover:hover){.pro-row:hover .pro-n{color:var(--gold)}}
+@media (min-width:900px){
+  .pro-in{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:clamp(48px,7vw,120px);grid-template-rows:auto auto 1fr;align-items:start}
+  .pro-h,.pro-p{grid-column:1}
+  .pro-list{grid-column:2;grid-row:1/4;margin-top:6px}
+}
+
+.ps{--psb:48px;--ps-h0:calc(100svh - var(--hh,84px));--ps-sh:calc((var(--ps-h0) - var(--psb)) * .84);--ps-chrome:196px;
+  --fh:max(150px,calc(var(--ps-sh) - var(--ps-chrome)));
+  position:relative;height:var(--ps-h0);background:var(--ink);color:var(--paper);
+  scroll-snap-align:start;scroll-margin-top:var(--hh,84px)}
+.ps-bar{position:absolute;top:0;left:0;right:0;height:var(--psb);display:flex;align-items:center;background:var(--ink);z-index:2}
 .ps-bar .cl{flex:1;min-width:0}
 .ps-feed{position:absolute;left:0;right:0;top:var(--psb);bottom:0;overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
 .ps-feed::-webkit-scrollbar{display:none}
 .ps-feed:focus-visible{outline:1px solid var(--gold);outline-offset:-3px}
 .ps-slide{box-sizing:border-box;height:var(--ps-sh);padding-top:clamp(16px,2.6svh,26px);display:flex;flex-direction:column;
-  border-bottom:1px solid var(--line);scroll-snap-align:start;scroll-snap-stop:always}
+  scroll-snap-align:start;scroll-snap-stop:always}
 .ps-end{height:calc((var(--ps-h0) - var(--psb)) * .16)}
 .ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
-.ps-kick,.ps-tags{margin:0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.4;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ps-kick{color:var(--soft)}
-.ps-no{margin-right:10px;color:var(--gold);font-variant-numeric:tabular-nums}
-.ps-desc{margin:6px 0 0;font-family:var(--f-serif);font-size:14px;line-height:1.5;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ps-id{margin-top:10px}
-.ps-name{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(26px,3vw,40px);line-height:1.12;letter-spacing:-.01em}
-.ps-tags{margin-top:6px;letter-spacing:.12em;color:var(--dim)}
+/* the one uppercase label style: the category line and a couple's tags. Nothing else on the stage is uppercase. */
+.ps-tags{margin:6px 0 0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.5;color:var(--dim)}
+.ps-name{margin:0;font-family:var(--f-display);font-weight:400;font-size:var(--t-headline-s);line-height:1.1;letter-spacing:-.01em}
 .ps-body{flex:1 1 auto;min-height:0;margin-top:12px;display:flex;flex-direction:column}
-.ps .seq-strip{flex:0 0 auto;padding:8px var(--pad);scroll-padding-inline:var(--pad);overflow-y:hidden;overscroll-behavior-x:contain;gap:clamp(18px,2.4vw,32px)}
+.ps .seq-strip{flex:0 0 auto;padding:8px var(--pad);scroll-padding-inline:var(--pad);overflow-y:hidden;overscroll-behavior-x:contain;gap:20px}
 .ps .frame{flex:0 0 auto;width:min(calc(var(--fh) * var(--ar,.75)),calc(100vw - 2 * var(--pad) - 4px))}
-.ps .frame .fr-img{width:100%;border-radius:var(--arch);outline:1px solid var(--line-2);outline-offset:6px}
-.ps .fr-cap{padding-top:16px;font-size:13px;line-height:1.4}
-.ps .fr-cap span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ps-foot{display:flex;align-items:center;justify-content:space-between;padding-top:2px}
-.ps-arrows{display:flex;gap:4px;margin-right:-12px}
-.ps-arrows button{width:44px;height:44px;display:grid;place-items:center;color:var(--dim);touch-action:manipulation;
-  transition:color .15s var(--ease),opacity .15s var(--ease),transform .12s ease-out}
-.ps-arrows button:active{transform:scale(.97)}
-.ps-arrows button svg{width:15px;height:15px}
-.ps-arrows button:disabled{opacity:.22;pointer-events:none}
-@media (hover:hover){.ps-arrows button:hover{color:var(--gold)}}
-.ps .seq-bar{margin:0 var(--pad)}
-/* the couple's name and tags fade up once when their slide becomes the current one */
+.ps .frame .fr-img{width:100%}
+/* chapter opener: the human voice, seven times a visit, never truncated */
+.ps-open{height:auto;min-height:calc(var(--ps-sh) * .7143);justify-content:center;padding-inline:var(--pad)}
+.ps-open-in{max-width:46rem}
+.ps-oname{margin:0;font-family:var(--f-display);font-weight:400;font-size:var(--t-headline);line-height:1.06;letter-spacing:-.015em}
+.ps-oalt{margin:12px 0 0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.5;color:var(--dim)}
+.ps-odesc{margin:18px 0 0;font-family:var(--f-serif);font-size:var(--t-quote);line-height:1.34;letter-spacing:-.01em;color:var(--paper);max-width:34ch}
+/* under the strip: the current frame's caption as a sentence, the count at the right */
+.ps-foot{display:flex;align-items:baseline;gap:16px;padding-top:14px}
+.ps-cap-t{flex:1;min-width:0;margin:0;min-height:2.9em;font-family:var(--f-serif);font-size:var(--t-small);line-height:1.45;color:var(--paper)}
+.ps .seq-count{flex:0 0 auto;font-family:var(--f-serif);font-size:var(--t-small);font-weight:400;letter-spacing:0;color:var(--soft);transition:color .3s var(--ease)}
+.ps-arrows{display:none}
+.ps .seq-bar{margin:6px var(--pad) 0}
+@media (hover:hover){
+  .ps-arrows{display:flex;gap:4px;margin:-12px -12px -12px 0}
+  .ps-arrows button{width:44px;height:44px;display:grid;place-items:center;color:var(--dim);touch-action:manipulation;
+    transition:color .15s var(--ease),opacity .15s var(--ease),transform .12s ease-out}
+  .ps-arrows button:active{transform:scale(.97)}
+  .ps-arrows button svg{width:15px;height:15px}
+  .ps-arrows button:disabled{opacity:.22;pointer-events:none}
+  .ps-arrows button:hover{color:var(--gold)}
+  /* looking is the product: a photograph answers the mouse (iPhone has no hover, it keeps tap feedback) */
+  .ps .frame .fr-img img{transition:transform .7s var(--ease)}
+  .ps .frame .fr-img:hover img{transform:scale(1.02)}
+  .ps-body:has(.fr-img:hover) .seq-count{color:var(--gold)}
+}
+/* the story turn, the one authored moment: the name and tags rise and fade in once, the first frame clears from slightly dimmed */
 @keyframes psIn{from{opacity:0;transform:translateY(8px)}}
+@keyframes psFade{from{opacity:0}}
+@keyframes psClear{from{opacity:.82}}
 .ps-slide.is-active .ps-id{animation:psIn .24s var(--ease) both}
+.ps-slide.is-active .frame:first-child .fr-img{animation:psClear .3s var(--ease) both}
+.ps-open.is-active .ps-oname{animation:psIn .24s var(--ease) both}
+.ps-open.is-active .ps-oalt,.ps-open.is-active .ps-odesc{animation:psFade .24s var(--ease) .06s both}
 @media (prefers-reduced-motion:reduce){
   @keyframes psIn{from{opacity:0}}
   .ul[data-on]{transition:none}
-  .wk-tog a:active,.cl-b:active,.ps-arrows button:active{transform:none}
+  .wk-tog a:active,.cl-b:active,.ps-arrows button:active,.pro-row:active .pro-n{transform:none}
+  .ps .frame .fr-img:hover img{transform:none}
 }
 /* a phone on its side: no peek, the whole stage is the slide, and the small print goes */
 @media (orientation:landscape) and (max-height:540px){
   .ps{--psb:42px;--ps-sh:calc(var(--ps-h0) - var(--psb));--ps-chrome:150px}
-  .ps-end,.ps-desc,.ps-tags{display:none}
+  .ps-end,.ps-tags,.ps-oalt{display:none}
+  .ps-open{min-height:var(--ps-sh)}
   .cl-b{min-height:40px}
 }
 

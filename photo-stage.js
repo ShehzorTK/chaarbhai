@@ -10,33 +10,59 @@
 let S=null;
 const $=(s,r)=>r.querySelector(s);
 
-/* one entry per couple that has a slide, in category order (app.js already dropped couples with 3 frames or fewer) */
+/* one entry per slide, in category order (app.js already dropped couples with 3 frames or fewer): each category opens
+   with a chapter-opener slide, then one slide per couple */
 function flat(){
   const out=[];
-  CHAPTERS.forEach((c,ci)=>c.seqs.forEach((q,qi)=>out.push({c,ci,q,first:qi===0})));
+  CHAPTERS.forEach((c,ci)=>{
+    out.push({open:true,c,ci});
+    c.seqs.forEach(q=>out.push({c,ci,q}));
+  });
   return out;
 }
 const catIndex=c=>(window.WORK_CATS||[]).indexOf(c.short);
 
-function headHTML(d){
-  const {c,q,first}=d;
-  return `<div class="ps-head">
-    <p class="ps-kick"><span class="ps-no">${c.no}</span>${esc(c.name)}${first?`<span class="ps-alt"> · ${esc(c.alt)}</span>`:''}</p>
-    ${first?`<p class="ps-desc">${esc(c.desc)}</p>`:''}
-    <div class="ps-id"><h3 class="ps-name">${q.couple}</h3>
-    <p class="ps-tags">${q.tags.map(esc).join(' · ')}</p></div>
+/* the prologue: a person talking, the contents (which is also the way in), and a cut-short bottom so the stage peeks in */
+function prologueHTML(){
+  return `<section class="pro" id="pro" aria-labelledby="pro-h">
+  <div class="pro-in">
+    <h1 class="pro-h" id="pro-h">Come in. Here is the week.</h1>
+    <p class="pro-p">These are real weddings, shown from the first night to the farewell. We start with portraits, then follow the week in the order it happened. Swipe a couple’s photographs sideways, scroll for the next story.</p>
+    <ol class="pro-list">${CHAPTERS.map(c=>`
+      <li><button class="pro-row" type="button" data-ch="${c.id}">
+        <span class="pro-n">${esc(c.name)}</span>
+        <span class="pro-a">${esc(c.alt.split(' · ').slice(0,3).join(' · '))}</span>
+        <span class="pro-c">${c.seqs.length} ${c.seqs.length===1?'couple':'couples'}</span>
+      </button></li>`).join('')}
+    </ol>
+  </div>
+</section>`;
+}
+
+function openerHTML(d){
+  const c=d.c;
+  return `<div class="ps-open-in">
+    <h2 class="ps-oname">${esc(c.name)}</h2>
+    <p class="ps-oalt">${esc(c.alt)}</p>
+    <p class="ps-odesc">${esc(c.desc)}</p>
   </div>`;
 }
-/* what a live slide holds: the sideways strip and its counter */
+function headHTML(d){
+  const q=d.q;
+  return `<div class="ps-head"><div class="ps-id"><h3 class="ps-name">${q.couple}</h3>
+    <p class="ps-tags">${q.tags.map(esc).join(' · ')}</p></div></div>`;
+}
+/* what a live slide holds: the sideways strip, one caption line with the count, and the progress bar */
 function bodyHTML(d){
   const q=d.q;
-  return `<div class="seq-strip">${q.frames.map((f,j)=>`
+  return `<div class="seq-strip">${q.frames.map(f=>`
     <figure class="frame" style="--ar:${f.ar}">
       <div class="fr-img" tabindex="0" role="button" aria-label="Open larger: ${esc(f.cap)}">${pic(f,'(max-width: 600px) 90vw, 620px',{parked:true})}</div>
-      <figcaption class="fr-cap"><span class="fr-no">${String(j+1).padStart(2,'0')}</span><span>${f.cap}</span></figcaption>
+      <figcaption class="fr-cap vf-sr"><span>${f.cap}</span></figcaption>
     </figure>`).join('')}</div>
   <div class="ps-foot">
-    <span class="seq-count">01 / ${String(q.frames.length).padStart(2,'0')}</span>
+    <p class="ps-cap-t"></p>
+    <span class="seq-count">1 of ${q.frames.length}</span>
     <span class="ps-arrows"><button class="sq-prev" type="button" aria-label="Previous frame" disabled>${ARROW('l')}</button>
     <button class="sq-next" type="button" aria-label="Next frame">${ARROW('r')}</button></span>
   </div>
@@ -44,19 +70,20 @@ function bodyHTML(d){
 }
 
 function html(){
-  const data=flat();if(!data.length)return '';
+  const data=flat();if(data.length<2)return '';
   const cats=[];data.forEach((d,i)=>{const k=catIndex(d.c);if(!cats.some(x=>x[0]===k))cats.push([k,i])});
-  return `<div class="ps wk-in" id="ps" data-n="${data.length}">
+  return prologueHTML()+`<div class="ps wk-in" id="ps" data-n="${data.length}">
   <div class="ps-bar">${VF.catLineHTML(cats,'Jump to a category of photographs')}</div>
-  <div class="ps-feed" tabindex="0" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>
-    `<article class="seq ps-slide" data-i="${i}" data-label="${esc([d.q.couple,...d.q.tags].join(' · '))}" aria-label="${esc(d.q.couple+', '+d.c.name)}">${headHTML(d)}<div class="ps-body"></div></article>`).join('')}
+  <div class="ps-feed" tabindex="0" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
+    ?`<article class="ps-slide ps-open" data-i="${i}" aria-label="${esc(d.c.name)}">${openerHTML(d)}</article>`
+    :`<article class="seq ps-slide" data-i="${i}" data-label="${esc([d.q.couple,...d.q.tags].join(' · '))}" aria-label="${esc(d.q.couple+', '+d.c.name)}">${headHTML(d)}<div class="ps-body"></div></article>`).join('')}
     <div class="ps-end" aria-hidden="true"></div></div>
   <p class="vf-sr" role="status" aria-live="polite"></p>
 </div>`;
 }
 
 function warm(i){
-  const el=S.slides[i];if(!el||el._live)return;
+  const el=S.slides[i];if(!el||el._live||S.data[i].open)return;
   el._live=true;
   $('.ps-body',el).innerHTML=bodyHTML(S.data[i]);
   sequences([el]);dragScroll([$('.seq-strip',el)]);
@@ -78,7 +105,7 @@ function activate(i){
   });
   const d=S.data[i];
   VF.markCat(S.root,catIndex(d.c),S.reduce);
-  S.live.textContent=d.q.couple+', '+d.c.name;
+  S.live.textContent=d.open?d.c.name:d.q.couple+', '+d.c.name;
   if(window.cbLog)cbLog('ps active '+i+', live '+S.slides.filter(e=>e._live).length);
 }
 
@@ -104,38 +131,54 @@ function mount(then){
     S.deb=setTimeout(()=>{if(S&&S.cand>=0)activate(S.cand)},90);     // not while a fling is still going past
   },{root:S.feed,threshold:[0.6]});
   S.slides.forEach(el=>S.io.observe(el));
-  /* while the stage is on screen the header (and its switch) stays, like the Films feed */
+  /* while the stage is on screen the header (and its switch) stays, like the Films feed. Once it sits flush under the
+     header the prologue has tucked behind it: its text fades out (opacity only, a class, no scroll-driven CSS). */
+  const pro=document.getElementById('pro');
   S.vio=new IntersectionObserver(es=>{
-    const on=es[es.length-1].intersectionRatio>=0.5;
+    const r=es[es.length-1].intersectionRatio,on=r>=0.5;
     document.body.classList.toggle('vf-in',on);
     if(on){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
-  },{threshold:[0,0.5]});
+    if(root.offsetParent!==null)S.tucked=r>=0.9;
+    if(pro&&root.offsetParent!==null)pro.classList.toggle('tucked',r>=0.9);
+  },{threshold:[0,0.5,0.9]});
   S.vio.observe(root);
   root.addEventListener('click',e=>{
     const b=e.target.closest('.cl-b');if(!b)return;
     go(S.data[+b.dataset.first].c.id);
   });
+  /* the contents list is the way in: open the stage on that chapter */
+  if(pro)S.proClick=e=>{
+    const b=e.target.closest('.pro-row');if(!b)return;
+    go(b.dataset.ch);
+    scrollTo({top:stageTop(),behavior:S.reduce?'instant':'smooth'});
+  };
+  if(pro)pro.addEventListener('click',S.proClick);
   go(then);
-  /* arriving on a chosen category (from Home): bring the stage up under the header as well */
+  /* arriving on a chosen category (from Home): bring the stage up under the header as well, no prologue */
   if(then)align();
 }
 function unmount(){
   if(!S)return;
-  clearTimeout(S.deb);S.io.disconnect();S.vio.disconnect();S=null;
+  clearTimeout(S.deb);S.io.disconnect();S.vio.disconnect();
+  const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
+  S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');
 }
 /* the stage's top edge just under the header, so it fills the screen */
+function stageTop(){
+  const hdr=document.getElementById('hdr');
+  return Math.max(0,S.root.getBoundingClientRect().top+scrollY-(hdr?hdr.offsetHeight:0));
+}
 function align(){
   if(!S)return;
-  const hdr=document.getElementById('hdr');
-  scrollTo({top:Math.max(0,S.root.getBoundingClientRect().top+scrollY-(hdr?hdr.offsetHeight:0)),behavior:'instant'});
+  scrollTo({top:stageTop(),behavior:'instant'});
 }
-/* coming back from Films: the hidden stage lost its scroll position */
+/* coming back from Films: the hidden stage lost its scroll position. Only bring the stage up again if it was up before. */
 function restore(){
   if(!S||S.root.offsetParent===null)return;
   const i=Math.max(0,S.active);
   S.feed.scrollTo({top:S.slides[i].offsetTop,behavior:'instant'});
-  align();
+  if(S.tucked)align();
   VF.syncUL();
 }
 

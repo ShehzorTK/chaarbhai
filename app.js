@@ -18,10 +18,14 @@ function pic(f,sizes,{alt=f.alt,eager=false,cls='',parked=false}={}){const a=T[0
  draggable="false" alt="${esc(alt)}"${f.pos?` style="object-position:${f.pos}"`:''}
  onerror="this.style.display='none';(this.closest('.fr-img,.arch,.thumb,.pk-m,.cta-bg,.hero-arch')||this.parentNode).style.background='linear-gradient(150deg,${a},${b})'">`}
 
-/* The categories of Work, in wedding-week order. Photographs and Films share this list (see video-feed.js). */
-window.WORK_CATS=['Night before','Henna','Ceremony','Arrival','Reception','Farewell','Portraits'];
+/* The categories of Work: Portraits first (the strongest frames), then the wedding week in order. Photographs and Films share this list (see video-feed.js). */
+window.WORK_CATS=['Portraits','Night before','Henna','Arrival','Ceremony','Reception','Farewell'];
 const HIDE_MAX=3;
 const CHAPTERS=[
+ {id:'before',no:'07',short:'Portraits',name:'Portraits',
+  alt:'Engagement · Nikkah and reception portraits',
+  desc:'An hour away from everyone, sometimes months before, sometimes between the ceremony and the reception. Two people, whatever light there is, and nobody watching.'},
+
  {id:'night',no:'01',short:'Night before',name:'The night before',
   alt:'Dholki · Sangeet · Jaggo · Mayoun',
   desc:'Days before anything official happens. The house fills up, someone digs the dhol out of a cupboard, and nobody goes home.'},
@@ -30,13 +34,13 @@ const CHAPTERS=[
   alt:'Mehndi · Haldi · Gaye holud · Vatna',
   desc:'Henna, turmeric, or both, depending on the family. Whatever yours calls it, it is the loudest and most crowded room of the week.'},
 
- {id:'ceremony',no:'03',short:'Ceremony',name:'The ceremony',
-  alt:'Nikkah · Anand Karaj · Pheras · Bibaho',
-  desc:'Usually the quietest hour of the whole week, and the only part of it that is actually binding.'},
-
  {id:'arrival',no:'04',short:'Arrival',name:'The arrival',
   alt:'Baraat · Milni · Entrances',
   desc:'Both families walking in. You hear it a long time before you see it, and there is always somebody’s grandmother waving at the back.'},
+
+ {id:'ceremony',no:'03',short:'Ceremony',name:'The ceremony',
+  alt:'Nikkah · Anand Karaj · Pheras · Bibaho',
+  desc:'Usually the quietest hour of the whole week, and the only part of it that is actually binding.'},
 
  {id:'reception',no:'05',short:'Reception',name:'The reception',
   alt:'Walima · Reception · Bou bhat',
@@ -44,11 +48,7 @@ const CHAPTERS=[
 
  {id:'farewell',no:'06',short:'Farewell',name:'The farewell',
   alt:'Rukhsati · Vidaai · Doli',
-  desc:'Twenty minutes, and the hardest part of the whole week to shoot properly.'},
-
- {id:'before',no:'07',short:'Portraits',name:'Portraits',
-  alt:'Engagement · Nikkah and reception portraits',
-  desc:'An hour away from everyone, sometimes months before, sometimes between the ceremony and the reception. Two people, whatever light there is, and nobody watching.'}
+  desc:'Twenty minutes, and the hardest part of the whole week to shoot properly.'}
 ]
 /* Each chapter shows the real weddings in PORTFOLIO, one slide per couple on Work. A couple with 3 frames or fewer
    gets no slide (the photos stay in portfolio.json, and drafts/portfolio/build_portfolio.py lists who is hidden), and a
@@ -221,11 +221,6 @@ P['/']=()=>`
 </section>`;
 
 P['/portfolio']=()=>`
-<section style="padding-top:clamp(140px,20vh,220px);padding-bottom:clamp(28px,4vw,48px)">
-  <h1 class="d1 rv" data-d="1">The archive</h1>
-  <p class="lead rv" data-d="2" style="margin-top:26px">Real weddings, shown the way they happened. Look through the photographs, one couple at a time (tap any photo to see it bigger), or watch the films, grouped the same way.</p>
-</section>
-
 <div id="wk-videos" hidden></div>
 
 <div id="wk-photos">${PS.html()}</div>`;
@@ -879,16 +874,22 @@ addEventListener('resize',()=>{
 },{passive:true});
 function sequences(seqs){
   seqs.forEach(seq=>{
-    const strip=seq.querySelector('.seq-strip'),cnt=seq.querySelector('.seq-count'),
+    const strip=seq.querySelector('.seq-strip'),cnt=seq.querySelector('.seq-count'),cap=seq.querySelector('.ps-cap-t'),
           bar=seq.querySelector('.seq-bar i'),prev=seq.querySelector('.sq-prev'),
           next=seq.querySelector('.sq-next'),frames=[...strip.querySelectorAll('.frame')],
           total=frames.length;
     if(!total)return;
+    let shown=0;
     const step=()=>frames[1]?frames[1].offsetLeft-frames[0].offsetLeft:frames[0].offsetWidth+16;
     const upd=()=>{
       const max=strip.scrollWidth-strip.clientWidth;
       const i=Math.max(1,Math.min(total,Math.round(strip.scrollLeft/step())+1));
-      cnt.textContent=String(i).padStart(2,'0')+' / '+String(total).padStart(2,'0');
+      if(i!==shown){
+        cnt.textContent=i+' of '+total;
+        if(cap){cap.textContent=frames[i-1].querySelector('.fr-cap span').textContent;
+          if(shown&&cap.animate)cap.animate([{opacity:0},{opacity:1}],{duration:150,easing:'ease-out'})}   // the caption cross-fades, opacity only
+        shown=i;
+      }
       bar.style.transform='scaleX('+(max>2?strip.scrollLeft/max:1)+')';
       prev.disabled=strip.scrollLeft<4; next.disabled=strip.scrollLeft>=max-4;
     };
@@ -1704,6 +1705,7 @@ function render(path){
   track('page_view',{page_title:document.title,page_location:location.origin+gp,page_path:gp});
   scrollTo({top:0,behavior:'instant'});
   const sub=document.getElementById('hdrsub');
+  document.documentElement.classList.toggle('on-work',path==='/portfolio');
   if(path==='/portfolio'){sub.innerHTML=VF.toggleHTML('photos');sub.hidden=false}else{sub.hidden=true;sub.textContent=''}
   document.getElementById('hdr').classList.remove('hide');
   observe();photoWindow();

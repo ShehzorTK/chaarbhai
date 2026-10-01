@@ -1557,6 +1557,7 @@ function loadYT(){
   });
   return ytReady;
 }
+if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
 function firstHeroVisit(){
@@ -1670,31 +1671,40 @@ function reel(){
   // local server) rather than double-clicked.
   if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
-    if(!document.body.contains(el))return;          // left the home page meanwhile
-    // Same recipe as the Films players, which start fine on Safari: the API builds the iframe with autoplay off,
-    // then the site mutes it and calls playVideo() itself once the page is showing (after the loader).
-    const p=new YT.Player(el,{
-      videoId:REEL,
-      playerVars:{origin:location.origin,autoplay:0,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
+    if(!el.isConnected)return;          // left the home page meanwhile
+    // The site builds the iframe so it carries allow="autoplay" and a muted autoplay URL from the first load
+    // (Safari decides about muted autoplay when the embed loads). No start/end in the URL: Safari stalled in
+    // buffering with them, so the reel is sent to REEL_FROM once it plays.
+    const q=new URLSearchParams({enablejsapi:1,origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1});
+    const fr=document.createElement('iframe');
+    fr.id='reel';fr.allow='autoplay; encrypted-media; picture-in-picture';fr.referrerPolicy='strict-origin-when-cross-origin';
+    fr.src='https://www.youtube.com/embed/'+REEL+'?'+q;
+    el.replaceWith(fr);
+    const p=new YT.Player(fr,{
       events:{
         onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.referrerPolicy='strict-origin-when-cross-origin';f.setAttribute('aria-hidden','true');
           f.title='Chaar Bhai wedding film reel';e.target.mute();preGone.then(()=>{if(!shown&&document.body.contains(f)){e.target.mute();e.target.playVideo()}});
           // browsers can hold back the first play (a tab still in the background,
           // a slow start), so nudge it a few times, and again when the tab comes
           // into view or the visitor first scrolls or taps
-          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'){e.target.mute();e.target.playVideo()}};
+          // only poke a player that is idle: re-sending play to one that is buffering can keep Safari from ever finishing the load
+          const idle=()=>{const st=e.target.getPlayerState();return st!==YT.PlayerState.PLAYING&&st!==YT.PlayerState.BUFFERING};
+          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'&&idle()){e.target.mute();e.target.playVideo()}};
           let tries=0;const t=setInterval(()=>{if(shown||++tries>60||!document.body.contains(f))return clearInterval(t);nudge()},1000);
-          const once=()=>{nudge();if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);document.removeEventListener('visibilitychange',once)}};
-          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);document.addEventListener('visibilitychange',once);
+          const once=()=>{if(!shown&&document.body.contains(f)){e.target.mute();e.target.playVideo()}if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);removeEventListener('keydown',once);document.removeEventListener('visibilitychange',once)}};
+          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);addEventListener('keydown',once);document.addEventListener('visibilitychange',once);
           // browsers pause video in a background tab; pick it back up on return
           const resume=()=>{if(!document.body.contains(f))return document.removeEventListener('visibilitychange',resume);
-            if(document.visibilityState==='visible'&&e.target.getPlayerState()!==YT.PlayerState.PLAYING){e.target.mute();e.target.playVideo()}};
+            if(document.visibilityState==='visible'&&idle()){e.target.mute();e.target.playVideo()}};
           document.addEventListener('visibilitychange',resume);
           // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
           const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
+            if(e.target.getPlayerState()!==YT.PlayerState.PLAYING)return;
             const t=e.target.getCurrentTime&&e.target.getCurrentTime();
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
+          // the reel starts at REEL_FROM: it begins at 0 (no start offset in the URL), so jump there and only reveal once it plays from there
+          if(e.data===YT.PlayerState.PLAYING&&!shown&&e.target.getCurrentTime()<REEL_FROM-.5){e.target.seekTo(REEL_FROM,true);return}
           if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
             shown=true;const f=e.target.getIframe();if(f)f.classList.add('on');
             playerShell.classList.add('is-playing');

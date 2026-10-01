@@ -1557,11 +1557,11 @@ function loadYT(){
   return ytReady;
 }
 if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
-/* End of the pen's time alone on the dark screen: the site (header, hero copy) fades in around it. */
-function penRelease(){
-  const h=document.documentElement;if(!h.classList.contains('cb-pen-hold'))return;
-  h.classList.remove('cb-pen-hold');document.body.classList.remove('locked');
-  setTimeout(()=>h.classList.remove('cb-pen-boot'),1200);
+/* Home intro: penRelease() lets the site (header, hero copy, labels) fade in around the drawing, penUnlock() ends the intro. */
+function penRelease(){document.documentElement.classList.remove('cb-pen-hold')}   // the site starts coming up, piece by piece (CSS delays)
+function penUnlock(){                                                             // the drawing is done: scrolling and the normal header behaviour are back
+  const h=document.documentElement;penRelease();document.body.classList.remove('locked');
+  setTimeout(()=>h.classList.remove('cb-pen-boot'),1500);
 }
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
@@ -1575,9 +1575,10 @@ function homeLogo(placeholder,firstVisit,reveal){
   const hero=placeholder.closest('.vhero'),copy=hero.querySelector('.vhero-in');
   const header=document.getElementById('hdr'),small=header.querySelector('.brand img');
   let disposed=false,played=false,settling=false,frame=0,flight=null,morph=null,pen=null;
-  let started=0,progress=0;
-  const MIN_HOLD=2200;   // the pen always draws alone on the dark screen for at least this long, even when everything is cached
-  const MAX_WAIT=7000;   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
+  let started=0,progress=0,skipOff=null;
+  const SITE_AT=500;     // the site starts coming up this long after the pen starts drawing
+  const DRAW=3200;       // the full drawing always plays, whatever is cached or already playing
+  const MAX_WAIT=7000;   // after the drawing: how long the finished mark waits in place for the video   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
   if(firstVisit)small.classList.add('cb-brand-in-flight');
@@ -1587,7 +1588,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     small.classList.remove('cb-brand-in-flight');header.classList.remove('cb-logo-landing');
   };
   const dispose=()=>{
-    disposed=true;cancelAnimationFrame(frame);sizing.disconnect();
+    disposed=true;if(skipOff)skipOff();cancelAnimationFrame(frame);sizing.disconnect();
     if(morph)morph.cancel();finishFlight();
     if(pen){pen.destroy();if(heroPen===pen)heroPen=null;pen=null;}
   };
@@ -1613,9 +1614,18 @@ function homeLogo(placeholder,firstVisit,reveal){
     ],{duration:700,easing:getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim(),fill:'forwards'});
     morph.finished.then(()=>{if(!disposed){finishFlight();disposed=true;}},()=>{});
   };
+  // before the flight the pulse is faded back to full opacity (200ms), so the mark is steady when its position is measured
+  const calm=()=>new Promise(r=>{
+    const art=placeholder.querySelector('.cb-art');
+    if(!art||!placeholder.classList.contains('cb-pulse')){placeholder.classList.remove('cb-pulse');r();return}
+    const o=getComputedStyle(art).opacity;
+    placeholder.classList.remove('cb-pulse');art.style.opacity=o;art.offsetWidth;
+    art.style.transition='opacity .2s ease';art.style.opacity='1';
+    setTimeout(()=>{art.style.transition='';art.style.opacity='';r()},220);
+  });
   const settle=()=>{
     if(disposed||settling||!placeholder.isConnected)return;
-    settling=true;reveal();
+    settling=true;reveal();if(skipOff)skipOff();
     cancelAnimationFrame(frame);
     if(!firstVisit){
       placeholder.classList.add('is-leaving');
@@ -1635,23 +1645,36 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){penRelease();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
+    if(!firstVisit||reduceMotion()){penUnlock();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
     // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
     pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
     placeholder.querySelector(':scope>img').hidden=true;
     await pen.ready;
     if(disposed)return;
     started=performance.now();
-    // The drawing runs for as long as the video takes to start (it slows towards the end so it never looks finished early),
-    // and the mark lands in the header the moment the video plays, or after MAX_WAIT at the latest.
+    // A tap, scroll attempt or key press skips to the end: the site arrives at once and the mark goes to the header.
+    const skip=()=>{
+      stopSkip();
+      document.documentElement.classList.add('cb-pen-skip');
+      penUnlock();
+      if(!disposed)settle();
+    };
+    const SKIP_EVENTS=['pointerdown','wheel','touchmove','keydown'];
+    const stopSkip=()=>SKIP_EVENTS.forEach(ev=>removeEventListener(ev,skip));
+    SKIP_EVENTS.forEach(ev=>addEventListener(ev,skip,{passive:true}));
+    skipOff=stopSkip;
+    // The mark never moves while it draws. After the full drawing it waits where it is (gently pulsing) until the video plays,
+    // up to MAX_WAIT, then lands in the header while the video fades in.
     const draw=now=>{
       if(disposed||settling)return;
       const t=now-started;
-      if(t>=MIN_HOLD)penRelease();           // from here the site comes up around the pen
-      if(played&&t>=MIN_HOLD){settle();return;}
-      if(t>=MAX_WAIT){settle();return;}
-      progress=Math.min(.94,1-Math.exp(-t/3000));
-      pen.seek(progress*pen.drawEnd);
+      if(t>=SITE_AT)penRelease();
+      const p=Math.min(1,t/DRAW),e=1-Math.pow(1-p,3);   // ease out: the strokes start quickly and settle
+      progress=e;pen.seek(progress*pen.drawEnd);
+      if(p<1){frame=requestAnimationFrame(draw);return}
+      penUnlock();
+      if(played||t>=DRAW+MAX_WAIT){calm().then(settle);return}   // no animation frames from here: calm() then settle()
+      placeholder.classList.add('cb-pulse');
       frame=requestAnimationFrame(draw);
     };
     frame=requestAnimationFrame(draw);
@@ -1995,7 +2018,7 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
     pre.setAttribute('aria-busy','false');pre.classList.add('gone');
     go();                                      // the page is built behind the pen, invisible until penRelease()
     preGoneResolve();                          // the pen starts drawing at once, alone on the dark screen
-    setTimeout(penRelease,6000);               // fallback if the pen never starts
+    setTimeout(penUnlock,12000);               // fallback if the pen never starts
     return;
   }
 

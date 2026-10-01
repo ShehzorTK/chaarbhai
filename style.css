@@ -109,13 +109,30 @@ p{text-wrap:pretty}
   display:grid;place-items:center;transition:opacity .4s var(--ease),visibility .4s}
 #pre.gone{opacity:0;visibility:hidden}
 html.seen #pre,html.cb-pen-boot #pre{display:none}
-html.cb-pen-boot body{background:#12141C}
-/* While the pen draws alone (cb-pen-hold) the header and the hero copy are invisible and the logo sits in the middle of the hero;
-   when the hold ends they fade in and the logo moves up above the headline. */
-html.cb-pen-boot #hdr,html.cb-pen-boot .vhero-in{transition:opacity .9s ease}
-html.cb-pen-boot .vhero .cb-hero-placeholder{transition:opacity .35s ease,inset .9s var(--ease)}
-html.cb-pen-hold #hdr,html.cb-pen-hold .vhero-in{opacity:0;pointer-events:none}
-html.cb-pen-hold .vhero .cb-hero-placeholder{inset:0}   /* dark-mode ink until the hero is up, whatever theme is chosen */
+html.cb-pen-boot body{background:#12141C}   /* dark-mode ink until the hero is up, whatever theme is chosen */
+/* Home intro (v40.6). The pen draws in a fixed place above the headline. While it draws, the site comes up around it,
+   one piece after another from the top (cb-pen-hold is lifted shortly after the drawing starts and each piece has its
+   own delay). Nothing pops: every piece fades and rises. The video stays hidden until the drawing is done. */
+html.cb-pen-boot #hdr{transition:opacity .8s var(--ease),transform .9s var(--ease)}
+html.cb-pen-boot .vhero-in>*,html.cb-pen-boot .vhero-foot{transition:opacity .8s var(--ease),transform 1.1s var(--ease)}
+html.cb-pen-boot #hdr{transition-delay:0s}
+html.cb-pen-boot .vhero-in h1{transition-delay:.15s}
+html.cb-pen-boot .vhero-in p{transition-delay:.25s}
+html.cb-pen-boot .vhero-in .acts{transition-delay:.35s}
+html.cb-pen-boot .vhero-foot{transition-delay:.45s}
+html.cb-pen-boot .vhero-in h1{transition-property:opacity,transform,filter;transition-duration:.8s,1.1s,.8s;transition-timing-function:var(--ease)}   /* the headline also comes out of a 6px blur */
+html.cb-pen-hold #hdr{opacity:0;transform:translateY(-10px);pointer-events:none}
+html.cb-pen-hold .vhero-in>*,html.cb-pen-hold .vhero-foot{opacity:0;transform:translateY(18px);pointer-events:none}
+html.cb-pen-hold .vhero-in h1{filter:blur(6px)}
+/* a tap, scroll attempt or key press skips ahead: everything arrives at once, quickly */
+html.cb-pen-skip #hdr,html.cb-pen-skip .vhero-in>*,html.cb-pen-skip .vhero-foot{transition-delay:0s!important;transition-duration:.3s!important}
+/* the finished mark waits for the video with a slow, gentle pulse */
+.vhero .cb-hero-placeholder.cb-pulse .cb-art{animation:cb-pulse 1.8s ease-in-out infinite}
+@keyframes cb-pulse{0%,100%{opacity:1}50%{opacity:.85}}   /* opacity only: nothing for the flight to measure against */
+@media(prefers-reduced-motion:reduce){
+  .vhero .cb-hero-placeholder.cb-pulse .cb-art{animation:none}
+  html.cb-pen-boot #hdr,html.cb-pen-boot .vhero-in>*,html.cb-pen-boot .vhero-foot{transition:none;transform:none;filter:none}
+}
 #pre .wrap,#wkpre .wrap{display:grid;justify-items:center;gap:30px;padding:20px}
 /* the logo builds upward as the site loads */
 .logo-build{position:relative;width:clamp(210px,30vw,430px);line-height:0}
@@ -250,6 +267,7 @@ p.lead{font-size:var(--t-lead);line-height:1.7;color:var(--dim);max-width:60ch;f
   transform:translate(-50%,-50%) scale(1.16);   /* pushes YouTube's title bar and logo past the edges */
   opacity:0;transition:opacity 1.2s var(--ease)}
 .vhero-yt.on{opacity:1}
+.vhero-player .vhero-yt{transition:opacity 1s var(--ease) .3s}   /* the video comes in slowly, just after the logo starts to move */
 .vhero-media::after{content:'';position:absolute;inset:0;
   background:linear-gradient(to top,rgba(18,20,28,.88) 0,rgba(18,20,28,.5) 28%,transparent 58%)}
 .vhero-in{position:relative;z-index:2;align-self:end;width:100%;

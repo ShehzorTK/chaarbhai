@@ -181,7 +181,6 @@ function go(id,smooth){
 function measure(){
   S.tick=0;
   if(!S||S.root.offsetParent===null)return;
-  if(S.fly!=null&&Math.abs(scrollY-S.fly)<2)S.fly=null;   // the glide has landed
   const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
   S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
   applyTint();
@@ -190,39 +189,50 @@ function measure(){
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
-/* Scrolling is the browser's own: the page snaps (CSS, always on while on Work) to the prologue, every slide and the footer.
-   Two small helps where a precise scroll (a trackpad, a driver) would otherwise fall back to where it started: the keys
-   Up, Down, PageUp, PageDown and Space step to the neighbouring snap point, and a wheel scroll over the long gap between
-   the menu and the first opener goes the whole way. Both are one smooth scrollTo onto a snap point, no state beyond a flag
-   that ignores the rest of a wheel burst while that glide runs. Left and Right step the couple's photographs. */
+/* The browser snaps (CSS, always on while on Work); a small controller only chooses WHICH snap point a wheel gesture or a key
+   goes to, and the snap does the landing. Without it a gentle scroll (one mouse notch, a light trackpad push) falls back to
+   where it started, because the browser picks the snap point nearest to where the scroll would END. Touch is untouched.
+   A wheel gesture is a run of events less than 100ms apart (momentum included): its first event steps one point, the rest of it
+   is swallowed. At the footer (the last point) a scroll down is left to the page. */
 const shown=()=>S&&S.root.offsetParent!==null;
-function stepTo(dir){
-  const y=scrollY,T=[0,...S.slides.map((_,i)=>slideTop(i))];
-  const t=dir>0?T.find(v=>v>y+4):T.reverse().find(v=>v<y-4);
-  if(t==null)return false;
-  S.fly=t;clearTimeout(S.flyT);S.flyT=setTimeout(()=>{if(S)S.fly=null},900);
-  scrollTo({top:t,behavior:S.reduce?'instant':'smooth'});
+function tops(){
+  const f=document.querySelector('footer'),max=document.documentElement.scrollHeight-innerHeight;
+  return [0,...S.slides.map((_,i)=>slideTop(i)),f?Math.min(max,f.getBoundingClientRect().top+scrollY):max];
+}
+function step(dir,edge){
+  const T=tops(),y=scrollY,now=performance.now(),fly=S.stepAt&&now-S.stepAt.t<700;
+  let i=0;T.forEach((v,k)=>{if(v<=y+4)i=k});                     // the snap area we are in (the last top at or above the window top)
+  if(fly)i=S.stepAt.i;
+  let to;
+  if(edge)to=T[dir>0?T.length-1:0];
+  else if(dir>0){if(i===T.length-1)return false;to=T[i+1]}      // at the footer: let the page scroll natively
+  else to=!fly&&y>T[i]+4?T[i]:T[Math.max(0,i-1)];               // inside an area (the footer, a tall prologue): back to its top; else the previous point
+  if(Math.abs(to-y)<2&&!fly)return false;
+  S.stepAt={i:T.reduce((m,v,k)=>Math.abs(v-to)<Math.abs(T[m]-to)?k:m,0),t:now};
+  scrollTo({top:to,behavior:S.reduce?'instant':'smooth'});
   return true;
 }
 function onWheel(e){
-  if(!shown()||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||!e.deltaY)return;
-  if(S.fly!=null){e.preventDefault();return}
-  const y=scrollY;if(y>innerHeight*2||(e.deltaY<0&&y<4))return;
-  if(e.deltaY>0?y<slideTop(0)-4:y<=slideTop(1)-8)if(stepTo(e.deltaY>0?1:-1))e.preventDefault();
+  if(!shown()||e.ctrlKey||!e.deltaY||Math.abs(e.deltaX)>Math.abs(e.deltaY)||document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked'))return;
+  const now=performance.now();
+  if(now-(S.wAt||0)>100)S.wOwn=step(e.deltaY>0?1:-1);      // first event of a gesture
+  S.wAt=now;
+  if(S.wOwn)e.preventDefault();
 }
 function onKey(e){
-  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey)return;
+  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key,t=e.target;
   if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
   if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
-  if(k==='ArrowRight'||k==='ArrowLeft'){
+  if(!e.shiftKey&&(k==='ArrowRight'||k==='ArrowLeft')){
     if(!S.inStage||S.active<0||(t.closest&&t.closest('.seq-strip')))return;   // a focused strip scrolls itself
     const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
     if(b&&!b.disabled){e.preventDefault();b.click()}
     return;
   }
-  const dir=(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]'))))?1:(k==='ArrowUp'||k==='PageUp')?-1:0;
-  if(dir&&stepTo(dir))e.preventDefault();
+  if(t.closest&&t.closest('button,a,[role="button"],.seq-strip')&&(k===' '||k==='Home'||k==='End'))return;   // a focused button keeps its own Space
+  const dir=k==='ArrowDown'||k==='PageDown'||(k===' '&&!e.shiftKey)?1:k==='ArrowUp'||k==='PageUp'||(k===' '&&e.shiftKey)?-1:k==='End'?1:k==='Home'?-1:0;
+  if(dir&&step(dir,k==='Home'||k==='End'))e.preventDefault();
 }
 function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 

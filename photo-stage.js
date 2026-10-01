@@ -205,7 +205,7 @@ function toStage(){
   /* our own eased glide with the snap switched off while it runs (the browser's smooth scroll fights the snap points: a fast jump, then a slow drift) */
   const y0=scrollY,dist=t-y0,dur=Math.min(900,420+Math.abs(dist)*.35),t0=performance.now(),ease=x=>1-Math.pow(1-x,4);
   const el=document.documentElement;el.classList.add('ps-fly');
-  const stop=()=>{el.classList.remove('ps-fly');if(S)S.lock=0};
+  const stop=()=>{el.classList.remove('ps-fly');if(S){S.lock=2;S.lastW=performance.now();settle()}};   // 2 = landed, still swallowing the tail of the gesture
   (function f(now){
     if(!S){el.classList.remove('ps-fly');return}
     const k=Math.min(1,(now-t0)/dur);scrollTo(0,y0+dist*ease(k));
@@ -213,9 +213,12 @@ function toStage(){
   })(t0);
   return true;
 }
+/* a wheel or trackpad gesture keeps sending events for a second after the finger lifts; those must not scroll the page natively once we have landed (the snap would jerk it on) */
+function settle(){clearTimeout(S.lockT);S.lockT=setTimeout(()=>{if(!S||S.lock===1)return;if(performance.now()-S.lastW<220)settle();else S.lock=0},120)}
 function onWheel(e){
-  if(!shown()||e.ctrlKey||e.deltaY<=0)return;
-  if(S.lock){e.preventDefault();return}
+  if(!shown()||e.ctrlKey)return;
+  if(S.lock){S.lastW=performance.now();if(e.deltaY>0)e.preventDefault();return}
+  if(e.deltaY<=0)return;
   if(Math.abs(e.deltaY)>=Math.abs(e.deltaX)&&toStage())e.preventDefault();
 }
 function onKey(e){
@@ -225,7 +228,7 @@ function onKey(e){
   if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
   const k=e.key;
   if(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]')))){
-    if(S.lock||toStage())e.preventDefault();
+    if(S.lock===1||toStage())e.preventDefault();
   }else if((k==='ArrowRight'||k==='ArrowLeft')&&S.inStage&&S.active>=0){
     if(t&&t.closest&&t.closest('.seq-strip'))return;   // a focused strip scrolls itself
     const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');

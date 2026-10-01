@@ -71,6 +71,12 @@
   --bar-solid:rgba(244,240,231,.98);
   color-scheme:light;
 }
+/* Contact stays night navy in either theme (app.js sets html.on-contact): the form is one colour, so the page ignores the theme switch */
+:root[data-theme="light"].on-contact{
+  --ink:#12141C;--ink-2:#191C26;--ink-3:#232735;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
+  --gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--soft:rgba(239,234,223,.54);--line:rgba(239,234,223,.12);--gline:rgba(206,192,163,.34);
+  --line-2:rgba(239,234,223,.22);--gold-wash:rgba(206,192,163,.1);--hdr:rgba(18,20,28,.86);--bar:rgba(18,20,28,.92);--bar-solid:rgba(18,20,28,.98);
+  color-scheme:dark}
 /* the home photograph keeps its night palette in either theme */
 /* The frame of the site stays night-navy in either theme: the header, the
    footer and the loading screen, so the beige mark always sits on dark.
@@ -166,7 +172,8 @@ header::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:no
   box-shadow:0 1px 0 var(--line);opacity:0;transition:opacity .3s}
 header.solid::before{opacity:1}
 /* on paper the bar is always there, so the navy mark never sits on a photograph */
-:root[data-theme="light"] header::before{opacity:1}   /* a solid navy bar over the paper page */
+:root[data-theme="light"] header:not(.over-hero)::before,:root[data-theme="light"] header.solid:not(.over-hero)::before{opacity:1}
+:root[data-theme="light"] header.over-hero::before{opacity:0}   /* a solid navy bar over the paper page, but not over the Home hero (app.js heroNav) */
 .brand{display:block;line-height:0;position:relative;z-index:951}   /* stays above the open mobile menu */
 .brand img{height:clamp(30px,4.4vw,42px);width:auto;display:block;
   transition:opacity .4s var(--ease)}
@@ -809,6 +816,10 @@ html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only whil
 html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
 /* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
 :root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--tint,var(--hdr));-webkit-backdrop-filter:none;backdrop-filter:none}
+/* light mode over the stage: the bar turns pale with the ground, so its type, mark and lines turn dark (never while the mobile menu is open: that stays night navy) */
+:root[data-theme="light"] body.vf-in:not(.vf-on):not(.locked) header{--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
+:root[data-theme="light"] body.vf-in:not(.vf-on):not(.locked) header::before{background:var(--tint-l,var(--ink));-webkit-backdrop-filter:none;backdrop-filter:none}
+:root[data-theme="light"] body.vf-in:not(.vf-on):not(.locked) header .brand img{filter:brightness(.3)}
 .pro{box-sizing:border-box;min-height:calc(100svh - 104px);scroll-snap-align:start;
   padding:calc(var(--hh,84px) + clamp(24px,5svh,56px)) var(--pad) clamp(14px,2.4svh,28px)}
 .pro-in{max-width:1180px;margin:0 auto;transition:opacity .3s var(--ease)}
@@ -852,7 +863,7 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps .frame{position:relative}   /* the hidden caption is absolutely placed: its box must be inside the strip so the strip clips it */
 .ps .frame .fr-img{width:100%}
 /* The tinted ground (dark mode only): --tint is the current story's ground. Gold, type and the logo never change. */
-:root[data-theme="light"] .ps-ground,:root[data-theme="light"] .ps-bar{background:var(--ink)}
+:root[data-theme="light"] .ps-ground,:root[data-theme="light"] .ps-bar{background:var(--tint-l,var(--ink))}   /* light mode: the same hues, as pale shades */
 /* the ground: ONE screen-sized layer (never the 60,000px-tall stage), so a colour change repaints one screen. Nothing moves on it. */
 .ps-groundwrap{position:sticky;top:0;height:100svh;margin-bottom:-100svh;overflow:hidden;pointer-events:none;z-index:0}
 .ps-ground{position:absolute;inset:0;background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}

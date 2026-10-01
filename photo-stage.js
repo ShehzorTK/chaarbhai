@@ -89,10 +89,25 @@ function html(){
    screen sets it: hovering a category, a contents row or a photograph changes nothing. */
 /* only a couple's slide has a colour (its own, else its chapter's): the prologue and the chapter openers stay the site's navy */
 const tintOf=d=>d.open?null:((d.q&&d.q.t)||d.c.tint||null);
+/* Light mode takes the same hue as the dark ground, as a pale shade (OKLCH L .955, chroma under .02: as quiet as the dark one) */
+const lin=v=>(v/=255)<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4),gam=v=>255*(v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055);
+function lightOf(hex){
+  const n=parseInt(hex.slice(1),16),r=lin(n>>16&255),g=lin(n>>8&255),b=lin(n&255);
+  const l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),q=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+  const A=1.9779984951*l-2.428592205*m+.4505937099*q,B=.0259040371*l+.7827717662*m-.808675766*q,h=Math.atan2(B,A);
+  let C=Math.min(.018,Math.max(.008,Math.hypot(A,B)+.002));
+  for(let k=0;k<12;k++,C*=.85){
+    const a=C*Math.cos(h),bb=C*Math.sin(h),L=.955,l3=Math.pow(L+.3963377774*a+.2158037573*bb,3),m3=Math.pow(L-.1055613458*a-.0638541728*bb,3),s3=Math.pow(L-.0894841775*a-1.291485548*bb,3);
+    const c=[4.0767416621*l3-3.3077115913*m3+.2309699292*s3,-1.2684380046*l3+2.6097574011*m3-.3413193965*s3,-.0041960863*l3-.7034186147*m3+1.707614701*s3];
+    if(c.every(v=>v>=0&&v<=1))return '#'+c.map(v=>Math.round(gam(v)).toString(16).padStart(2,'0')).join('');
+  }
+  return null;
+}
 function setTint(t){
   if(!S||S.notint)return;
   const st=S.host.style;
-  if(t){st.setProperty('--tint',t.g)}else{st.removeProperty('--tint')}
+  if(t){st.setProperty('--tint',t.g);const lt=t.lt||(t.lt=lightOf(t.g));if(lt)st.setProperty('--tint-l',lt);else st.removeProperty('--tint-l')}
+  else{st.removeProperty('--tint');st.removeProperty('--tint-l')}
 }
 
 /* the ground only takes the colour while the stage is up under the header; the menu above it stays navy */
@@ -213,7 +228,7 @@ function unmount(){
   if(!S)return;
   clearTimeout(S.deb);if(S.io)S.io.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
-  S.host.style.removeProperty('--tint');
+  S.host.style.removeProperty('--tint');S.host.style.removeProperty('--tint-l');
   document.documentElement.classList.remove('snap-y');
   removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);
   S=null;

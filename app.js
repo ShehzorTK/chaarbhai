@@ -1707,8 +1707,9 @@ function render(path){
   scrollTo({top:0,behavior:'instant'});
   const sub=document.getElementById('hdrsub');
   document.documentElement.classList.toggle('on-work',path==='/portfolio');
+  document.documentElement.classList.toggle('on-contact',path==='/contact');
   if(path==='/portfolio'){sub.innerHTML=VF.toggleHTML('photos');sub.hidden=false}else{sub.hidden=true;sub.textContent=''}
-  document.getElementById('hdr').classList.remove('hide');
+  document.getElementById('hdr').classList.remove('hide');heroNav();
   observe();photoWindow();
   if(path==='/portfolio'){PS.mount(jumpAfter&&jumpAfter.replace(/^ch-/,''));VF.syncUL()}else PS.unmount();
   jumpAfter=null;
@@ -1879,9 +1880,15 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&navlinks.classList.contains(
 document.getElementById('skip').addEventListener('click',()=>{
   const h=main.querySelector('h1'); if(h){h.tabIndex=-1;h.focus()}});
 
+/* Home, light mode: the bar stays clear over the hero (like dark mode) and turns navy only once the hero is scrolled past */
+function heroNav(){
+  const h=document.getElementById('hdr'),hero=document.querySelector('.vhero');
+  h.classList.toggle('over-hero',!!hero&&hero.getBoundingClientRect().bottom>h.offsetHeight);
+}
+addEventListener('resize',heroNav,{passive:true});
 let ly=0;
 addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
-  h.classList.toggle('solid',y>36);
+  h.classList.toggle('solid',y>36);heroNav();
   if(Math.abs(y-ly)<8)return;                  // trackpad and momentum jitter shouldn't flick the header in and out
   h.classList.toggle('hide',y>ly&&y>330&&!navlinks.classList.contains('open')&&!document.body.classList.contains('vf-in'));ly=y;},{passive:true});
 

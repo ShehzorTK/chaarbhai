@@ -181,6 +181,7 @@ function go(id,smooth){
 function measure(){
   S.tick=0;
   if(!S||S.root.offsetParent===null)return;
+  if(S.fly!=null&&Math.abs(scrollY-S.fly)<2)S.fly=null;   // the glide has landed
   const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
   S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
   applyTint();
@@ -190,16 +191,38 @@ function measure(){
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
 /* Scrolling is the browser's own: the page snaps (CSS, always on while on Work) to the prologue, every slide and the footer.
-   Left and Right step the photographs of the couple on screen. */
+   Two small helps where a precise scroll (a trackpad, a driver) would otherwise fall back to where it started: the keys
+   Up, Down, PageUp, PageDown and Space step to the neighbouring snap point, and a wheel scroll over the long gap between
+   the menu and the first opener goes the whole way. Both are one smooth scrollTo onto a snap point, no state beyond a flag
+   that ignores the rest of a wheel burst while that glide runs. Left and Right step the couple's photographs. */
 const shown=()=>S&&S.root.offsetParent!==null;
+function stepTo(dir){
+  const y=scrollY,T=[0,...S.slides.map((_,i)=>slideTop(i))];
+  const t=dir>0?T.find(v=>v>y+4):T.reverse().find(v=>v<y-4);
+  if(t==null)return false;
+  S.fly=t;clearTimeout(S.flyT);S.flyT=setTimeout(()=>{if(S)S.fly=null},900);
+  scrollTo({top:t,behavior:S.reduce?'instant':'smooth'});
+  return true;
+}
+function onWheel(e){
+  if(!shown()||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||!e.deltaY)return;
+  if(S.fly!=null){e.preventDefault();return}
+  const y=scrollY;if(y>innerHeight*2||(e.deltaY<0&&y<4))return;
+  if(e.deltaY>0?y<slideTop(0)-4:y<=slideTop(1)-8)if(stepTo(e.deltaY>0?1:-1))e.preventDefault();
+}
 function onKey(e){
-  const k=e.key;
-  if((k!=='ArrowRight'&&k!=='ArrowLeft')||!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!S.inStage||S.active<0)return;
-  const t=e.target;
-  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||(t.closest&&t.closest('.seq-strip'))))return;   // a focused strip scrolls itself
+  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey)return;
+  const k=e.key,t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
   if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
-  const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
-  if(b&&!b.disabled){e.preventDefault();b.click()}
+  if(k==='ArrowRight'||k==='ArrowLeft'){
+    if(!S.inStage||S.active<0||(t.closest&&t.closest('.seq-strip')))return;   // a focused strip scrolls itself
+    const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
+    if(b&&!b.disabled){e.preventDefault();b.click()}
+    return;
+  }
+  const dir=(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]'))))?1:(k==='ArrowUp'||k==='PageUp')?-1:0;
+  if(dir&&stepTo(dir))e.preventDefault();
 }
 function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
@@ -234,6 +257,7 @@ function mount(then){
   }
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
+  addEventListener('wheel',onWheel,{passive:false});
   document.addEventListener('keydown',onKey);
   observe();
   root.addEventListener('click',e=>{
@@ -252,7 +276,7 @@ function unmount(){
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
   ['--tint','--glow'].forEach(k=>S.host.style.removeProperty(k));
   cancelAnimationFrame(S.raf);
-  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
+  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('wheel',onWheel);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
   if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');

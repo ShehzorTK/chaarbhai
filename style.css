@@ -1086,6 +1086,7 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
 .vhero-player{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .vhero .cb-hero-placeholder{z-index:2}
 .vhero-player iframe{position:absolute;top:50%;left:50%;border:0;pointer-events:none;background:transparent;
+  opacity:0;   /* YouTube's page is black until it plays: hidden from the moment the iframe exists, not only once onReady adds .vhero-yt */
   width:max(100cqw,calc(100cqh*16/9));height:max(100cqh,calc(100cqw*9/16));
   transform:translate(-50%,-50%) scale(1.16)}
 .cb-logo-flight{position:fixed;z-index:10002;object-fit:contain;pointer-events:none;transform-origin:top left;will-change:transform}

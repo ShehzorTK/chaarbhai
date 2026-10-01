@@ -53,7 +53,7 @@ const CHAPTERS=[
 /* Each chapter shows the real weddings in PORTFOLIO, one slide per couple on Work. A couple with 3 frames or fewer
    gets no slide (the photos stay in portfolio.json, and drafts/portfolio/build_portfolio.py lists who is hidden), and a
    chapter with no slides yet stays hidden until one is added. Keep HIDE_MAX in step with the script. */
- .map(c=>({...c,seqs:(PORTFOLIO[c.id]||[]).filter(q=>q.frames.length>HIDE_MAX),cover:PICKS.covers[c.id]}))
+ .map(c=>({...c,seqs:(PORTFOLIO[c.id]||[]).filter(q=>q.frames.length>HIDE_MAX),cover:PICKS.covers[c.id],tint:(PICKS.tints||{})[c.id]}))
  .filter(c=>c.seqs.length)
  .map((c,i)=>({...c,no:String(i+1).padStart(2,'0'),frames:c.seqs.reduce((n,q)=>n+q.frames.length,0)}));
 

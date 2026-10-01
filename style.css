@@ -135,10 +135,10 @@ html.cb-pen-hold .vhero-in h1{filter:blur(6px)}
 /* a tap, scroll attempt or key press skips ahead: everything arrives at once, quickly */
 html.cb-pen-skip #hdr,html.cb-pen-skip .vhero-in>*,html.cb-pen-skip .vhero-foot{transition-delay:0s!important;transition-duration:.3s!important}
 /* the finished mark waits for the video with a slow, gentle pulse */
-.vhero .cb-hero-placeholder.cb-pulse .cb-art{animation:cb-pulse 1.8s ease-in-out infinite}
-@keyframes cb-pulse{0%,100%{opacity:1}50%{opacity:.85}}   /* opacity only: nothing for the flight to measure against */
+.vhero .cb-hero-placeholder.cb-pulse .cb-art,.vhero .cb-hero-placeholder.cb-pulse>img{animation:cb-pulse 2.4s ease-in-out infinite}
+@keyframes cb-pulse{0%,100%{opacity:1}50%{opacity:.55}}   /* opacity only: nothing for the flight to measure against */
 @media(prefers-reduced-motion:reduce){
-  .vhero .cb-hero-placeholder.cb-pulse .cb-art{animation:none}
+  .vhero .cb-hero-placeholder.cb-pulse .cb-art,.vhero .cb-hero-placeholder.cb-pulse>img{animation:none}
   html.cb-pen-boot #hdr,html.cb-pen-boot .vhero-in>*,html.cb-pen-boot .vhero-foot{transition:none;transform:none;filter:none}
 }
 #pre .wrap,#wkpre .wrap{display:grid;justify-items:center;gap:30px;padding:20px}

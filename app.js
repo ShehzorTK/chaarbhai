@@ -1499,7 +1499,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   // before the flight the pulse is faded back to full opacity (200ms), so the mark is steady when its position is measured
   const calm=()=>new Promise(r=>{
-    const art=placeholder.querySelector('.cb-art');
+    const art=placeholder.querySelector('.cb-art')||placeholder.querySelector(':scope>img');
     if(!art||!placeholder.classList.contains('cb-pulse')){placeholder.classList.remove('cb-pulse');r();return}
     const o=getComputedStyle(art).opacity;
     placeholder.classList.remove('cb-pulse');art.style.opacity=o;art.offsetWidth;
@@ -1510,9 +1510,8 @@ function homeLogo(placeholder,firstVisit,reveal){
     if(disposed||settling||!placeholder.isConnected)return;
     settling=true;if(!pen)reveal();if(skipOff)skipOff();   // with the pen the video is revealed by fly(), once the mark is moving
     cancelAnimationFrame(frame);
-    if(!firstVisit){
-      placeholder.classList.add('is-leaving');
-      afterTransition(placeholder,400).then(()=>{placeholder.remove();dispose()});
+    if(!firstVisit){            // coming from another page: the waiting mark settles, then travels to the header like the first time
+      calm().then(fly);
       return;
     }
     if(!pen){fly();return;}
@@ -1529,7 +1528,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){unlock();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
+    if(!firstVisit||reduceMotion()){unlock();if(played)settle();else{if(!reduceMotion())placeholder.classList.add('cb-pulse');setTimeout(()=>{if(!disposed)settle()},MAX_WAIT)}return;}   // from another page: the mark pulses softly until the video plays
     // One ready gate: fonts and pen images together (1.5s at most), then measure the headline once and start.
     const imgs=['img/pen-loader-1.png','img/pen-loader-3.png','img/pen-loader-4.png'].map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u}));
     await Promise.race([Promise.all([window.CB_FONTS||0,document.fonts&&document.fonts.ready,...imgs]),new Promise(r=>setTimeout(r,1500))]);

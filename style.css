@@ -81,7 +81,7 @@ footer{background:var(--ink)}
 .vhero{--paper:#EFEADF;--dim:rgba(239,234,223,.78);--soft:rgba(239,234,223,.66);--gold:#CEC0A3;--gold-hi:#E6D9B8;--ink:#12141C;color:var(--paper)}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-font-smoothing:antialiased;color-scheme:dark;scrollbar-color:var(--gline) var(--ink)}
+html{background:none;-webkit-font-smoothing:antialiased;color-scheme:dark;scrollbar-color:var(--gline) var(--ink)}
 body{background:var(--ink);color:var(--paper);
   font-family:var(--f-sans);font-size:var(--t-body);line-height:1.65;font-weight:400;
   overflow-x:hidden}
@@ -109,7 +109,8 @@ p{text-wrap:pretty}
   display:grid;place-items:center;transition:opacity .4s var(--ease),visibility .4s}
 #pre.gone{opacity:0;visibility:hidden}
 html.seen #pre,html.cb-pen-boot #pre{display:none}
-html.cb-pen-boot body{background:#12141C}   /* dark-mode ink until the hero is up, whatever theme is chosen */
+html.cb-pen-boot body{background:#12141C}
+html.cb-pen-exit body{transition:background-color .6s var(--ease)}   /* light mode: the dark intro room fades to cream instead of flipping */   /* dark-mode ink until the hero is up, whatever theme is chosen */
 /* Home intro (v40.6). The pen draws in a fixed place above the headline. While it draws, the site comes up around it,
    one piece after another from the top (cb-pen-hold is lifted shortly after the drawing starts and each piece has its
    own delay). Nothing pops: every piece fades and rises. The video stays hidden until the drawing is done. */
@@ -1071,6 +1072,8 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
 .vhero .cb-hero-placeholder>img,.vhero .cb-loader .cb-art{width:min(840px,76vw,calc(100cqh * 2.087));height:auto;object-fit:contain}
 .vhero .cb-loader{--cb-background:transparent;--cb-logo-width:840px}
 .vhero .cb-hero-placeholder.is-leaving{opacity:0;pointer-events:none}
+.vhero .cb-loader{animation:cb-pen-in .3s var(--ease) backwards}   /* the pen fades in once everything is ready, it never pops */
+@keyframes cb-pen-in{from{opacity:0}}
 @media(max-width:600px){
   .vhero .cb-loader .cb-art,.vhero .cb-hero-placeholder>img{width:min(86vw,calc(100cqh * 2.087))}
 }

@@ -1561,7 +1561,7 @@ if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // H
 function penRelease(){document.documentElement.classList.remove('cb-pen-hold')}   // the site starts coming up, piece by piece (CSS delays)
 function penUnlock(){                                                             // the drawing is done: scrolling and the normal header behaviour are back
   const h=document.documentElement;penRelease();document.body.classList.remove('locked');
-  setTimeout(()=>h.classList.remove('cb-pen-boot'),1500);
+  setTimeout(()=>{h.classList.add('cb-pen-exit');h.classList.remove('cb-pen-boot');setTimeout(()=>h.classList.remove('cb-pen-exit'),700)},1500);   // cb-pen-exit: the background fades back to the theme colour
 }
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
@@ -1580,7 +1580,9 @@ function homeLogo(placeholder,firstVisit,reveal){
   const DRAW=3200;       // the full drawing always plays, whatever is cached or already playing
   const MAX_WAIT=7000;   // after the drawing: how long the finished mark waits in place for the video   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
-  size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
+  size();const sizing=new ResizeObserver(size);heroSizing=sizing;
+  // Measured once behind the ready gate; the observer only runs once the intro is over, so the pen never moves while it draws.
+  const unlock=()=>{penUnlock();if(!disposed&&placeholder.isConnected)sizing.observe(copy)};
   if(firstVisit)small.classList.add('cb-brand-in-flight');
   if(firstVisit&&!reduceMotion())placeholder.querySelector(':scope>img').hidden=true;   // no flash of the finished logo before the pen starts
   const finishFlight=()=>{
@@ -1647,7 +1649,12 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){penUnlock();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
+    if(!firstVisit||reduceMotion()){unlock();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
+    // One ready gate: fonts and pen images together (1.5s at most), then measure the headline once and start.
+    const imgs=['img/pen-loader-1.png','img/pen-loader-3.png','img/pen-loader-4.png'].map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u}));
+    await Promise.race([Promise.all([window.CB_FONTS||0,document.fonts&&document.fonts.ready,...imgs]),new Promise(r=>setTimeout(r,1500))]);
+    if(disposed||!placeholder.isConnected)return;
+    size();
     // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
     pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
     placeholder.querySelector(':scope>img').hidden=true;
@@ -1658,7 +1665,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     const skip=()=>{
       stopSkip();
       document.documentElement.classList.add('cb-pen-skip');
-      penUnlock();
+      unlock();
       if(!disposed)settle();
     };
     const SKIP_EVENTS=['pointerdown','wheel','touchmove','keydown'];
@@ -1674,7 +1681,7 @@ function homeLogo(placeholder,firstVisit,reveal){
       const p=Math.min(1,t/DRAW),e=1-Math.pow(1-p,3);   // ease out: the strokes start quickly and settle
       progress=e;pen.seek(progress*pen.drawEnd);
       if(p<1){frame=requestAnimationFrame(draw);return}
-      penUnlock();
+      unlock();
       if(played||t>=DRAW+MAX_WAIT){calm().then(settle);return}   // no animation frames from here: calm() then settle()
       placeholder.classList.add('cb-pulse');
       frame=requestAnimationFrame(draw);

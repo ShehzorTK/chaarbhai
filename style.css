@@ -805,7 +805,9 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
    The stage snaps one chapter opener or couple at a time like the Films feed; a slide is 84% of the stage, so the next
    one peeks in below it. Photographs stay bare: no stroke, frame or shadow. Depth comes from space. */
 html.on-work{scroll-snap-type:y proximity}
-html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue never ghosts through the header */
+html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
+/* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
+:root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--hov,var(--tint,var(--hdr)));-webkit-backdrop-filter:none;backdrop-filter:none}
 .pro{box-sizing:border-box;min-height:calc(100svh - 104px);scroll-snap-align:start;
   background:var(--hov,var(--ink));transition:background-color .8s var(--quint);
   padding:calc(var(--hh,84px) + clamp(24px,5svh,56px)) var(--pad) clamp(14px,2.4svh,28px)}
@@ -837,7 +839,7 @@ html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue ne
 .ps-bar{position:absolute;top:0;left:0;right:0;height:var(--psb);display:flex;align-items:center;z-index:2}   /* no ground of its own: the stage's tint and glow run behind it (the feed below is clipped at the bar's edge, nothing slides under it) */
 .ps-bar .cl{flex:1;min-width:0}
 .ps-feed{position:absolute;left:0;right:0;top:var(--psb);bottom:0;overflow-y:auto;overflow-x:hidden;
-  scroll-snap-type:y mandatory;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+  scroll-snap-type:y mandatory;touch-action:pan-y;scrollbar-width:none}   /* no overscroll-behavior: at its first or last slide the swipe carries on to the page, so you can always scroll back up to the prologue and the header */
 .ps-feed::-webkit-scrollbar{display:none}
 .ps-feed:focus-visible{outline:1px solid var(--gold);outline-offset:-3px}
 .ps-slide{box-sizing:border-box;height:var(--ps-sh);padding-top:clamp(16px,2.6svh,26px);display:flex;flex-direction:column;
@@ -855,7 +857,7 @@ html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue ne
 :root[data-theme="light"] .ps,:root[data-theme="light"] .pro{background:var(--ink)}
 :root[data-theme="light"] .ps-glow{display:none}
 /* the glow: one layer, a pre-painted soft circle (a mask, no blur, no blend modes) moved by transform only */
-.ps-glow{position:absolute;left:0;top:0;width:70vmax;height:70vmax;z-index:0;pointer-events:none;opacity:.2;
+.ps-glow{position:absolute;left:0;top:0;width:70vmax;height:70vmax;z-index:0;pointer-events:none;opacity:.09;
   background-color:var(--hov-glow,var(--glow,transparent));transition:background-color .8s var(--quint);will-change:transform;
   -webkit-mask-image:radial-gradient(closest-side,#000,transparent);mask-image:radial-gradient(closest-side,#000,transparent)}
 .ps-feed{z-index:1}
@@ -863,7 +865,7 @@ html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue ne
   .ps-glow{transition:background-color .8s var(--quint),transform 1.4s var(--quint);animation:psDrift 24s ease-in-out infinite alternate}
   .ps.glow-off .ps-glow{animation-play-state:paused}
 }
-@keyframes psDrift{from{translate:-5vmax -2vmax}to{translate:5vmax 2vmax}}
+@keyframes psDrift{from{translate:-3vmax -1vmax}to{translate:3vmax 1vmax}}
 /* chapter opener: the human voice, seven times a visit, never truncated */
 .ps-open{height:auto;min-height:calc(var(--ps-sh) * .7143);justify-content:center;padding-inline:var(--pad)}
 .ps-open-in{max-width:46rem}
@@ -902,7 +904,7 @@ html.on-work header::before{opacity:1}   /* a solid bar on Work: the prologue ne
   .ul[data-on]{transition:none}
   .wk-tog a:active,.cl-b:active,.ps-arrows button:active,.pro-row:active .pro-n{transform:none}
   .ps .frame .fr-img:hover img{transform:none}
-  .ps,.pro,.ps-glow{transition:none}   /* the colour still changes, without the 800ms ease */
+  .ps,.pro,.ps-glow,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
   .ps-glow{animation:none}
 }
 /* a phone on its side: no peek, the whole stage is the slide, and the small print goes */

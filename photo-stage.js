@@ -174,7 +174,7 @@ function mount(then){
   const data=flat();
   S={root,data,feed:$('.ps-feed',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
      reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,active:-1,cand:-1,deb:0,
-     host:document.getElementById('wk-photos'),glow:$('.ps-glow',root),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
+     host:document.documentElement,glow:$('.ps-glow',root),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
   S.slides.forEach(el=>{el.inert=true});
   glowRest();
   if(S.fine&&!S.reduce){
@@ -233,6 +233,7 @@ function unmount(){
   if(!S)return;
   clearTimeout(S.deb);S.io.disconnect();S.vio.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
+  ['--tint','--glow','--hov','--hov-glow'].forEach(k=>S.host.style.removeProperty(k));
   cancelAnimationFrame(S.raf);removeEventListener('resize',glowRest);
   if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
   if(S.hov)S.hov.forEach(n=>{n.removeEventListener('mouseover',S.hovFns[0]);n.removeEventListener('mouseout',S.hovFns[1])});

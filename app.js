@@ -1565,13 +1565,12 @@ function firstHeroVisit(){
   heroVisited=true;
   return !seen;
 }
-function homeLogo(placeholder,firstVisit){
+function homeLogo(placeholder,firstVisit,reveal){
   const hero=placeholder.closest('.vhero'),copy=hero.querySelector('.vhero-in');
   const header=document.getElementById('hdr'),small=header.querySelector('.brand img');
   let disposed=false,played=false,settling=false,frame=0,flight=null,morph=null,pen=null;
-  let started=0,expected=8000,progress=0;
-  const localDemo=location.protocol==='file:'||['localhost','127.0.0.1','[::1]'].includes(location.hostname);
-  try{expected=Math.max(3000,Math.min(20000,Number(sessionStorage.getItem('cb-reel-wait'))||8000))}catch(e){}
+  let started=0,progress=0;
+  const HOLD=2000;   // the hero logo stays for this long, then lands in the header and the video underneath is revealed, whatever the player is doing
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
   if(firstVisit)small.classList.add('cb-brand-in-flight');
@@ -1608,7 +1607,7 @@ function homeLogo(placeholder,firstVisit){
   };
   const settle=()=>{
     if(disposed||settling||!placeholder.isConnected)return;
-    settling=true;
+    settling=true;reveal();
     cancelAnimationFrame(frame);
     if(!firstVisit){
       placeholder.classList.add('is-leaving');
@@ -1628,21 +1627,19 @@ function homeLogo(placeholder,firstVisit){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){if(played)settle();return;}
+    if(!firstVisit||reduceMotion()){if(played)settle();else setTimeout(()=>{if(!disposed)settle()},HOLD);return;}
     // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
     pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
     placeholder.querySelector(':scope>img').hidden=true;
     await pen.ready;
     if(disposed)return;
     started=performance.now();
-    if(played){settle();return;}
+    // The drawing takes a fixed HOLD, not as long as the video takes to start, then the mark lands in the header.
     const draw=now=>{
-      if(disposed||played)return;
-      // Local preview demonstrates the logo itself without waiting for a video.
-      // Published hosts remain strictly tied to the real PLAYING event.
-      progress=localDemo?Math.min(1,(now-started)/8000):Math.min(.94,1-Math.exp(-(now-started)/expected));
+      if(disposed||settling)return;
+      progress=Math.min(1,(now-started)/HOLD);
       pen.seek(progress*pen.drawEnd);
-      if(localDemo&&progress===1){played=true;pen.finish();fly();return;}
+      if(progress===1){settle();return;}
       frame=requestAnimationFrame(draw);
     };
     frame=requestAnimationFrame(draw);
@@ -1652,8 +1649,8 @@ function homeLogo(placeholder,firstVisit){
     playing(){
       if(disposed||played)return;
       played=true;
-      if(started)try{sessionStorage.setItem('cb-reel-wait',String(Math.max(3000,performance.now()-started)))}catch(e){}
-      ready.then(()=>{if(!disposed)settle()});
+      // first visit: the pen keeps its fixed time. Returning visit: the still logo leaves as soon as the video plays.
+      if(!firstVisit)ready.then(()=>{if(!disposed)settle()});
     }
   };
 }
@@ -1661,7 +1658,10 @@ function reel(){
   if(heroLogo){heroLogo.dispose();heroLogo=null;}
   const el=document.getElementById('reel');if(!el)return;
   const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
-  heroLogo=homeLogo(placeholder,firstHeroVisit());const logo=heroLogo;
+  // shows the video: called when the logo lands (a fixed time after it appears) or when the video plays, whichever comes first
+  let revealed=false;
+  const reveal=()=>{revealed=true;const f=playerShell.querySelector('iframe');if(f)f.classList.add('on');playerShell.classList.add('is-playing')};
+  heroLogo=homeLogo(placeholder,firstHeroVisit(),reveal);const logo=heroLogo;
   let shown=false;
   if(reduceMotion())return;
   // YouTube won't play embeds on a page opened straight from disk (file://):
@@ -1678,7 +1678,7 @@ function reel(){
       videoId:REEL,
       playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
-        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
+        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');if(revealed)f.classList.add('on');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
           f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
           // browsers can hold back the first play (a tab still in the background,
           // a slow start), so nudge it a few times, and again when the tab comes
@@ -1697,8 +1697,7 @@ function reel(){
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
           if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
-            shown=true;const f=e.target.getIframe();if(f)f.classList.add('on');
-            playerShell.classList.add('is-playing');
+            shown=true;reveal();
             logo.playing();
           }
           if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}

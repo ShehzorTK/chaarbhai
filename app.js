@@ -132,12 +132,10 @@ const P={};
 P['/']=()=>`
 <section class="vhero">
   <div class="vhero-media">
-    <!-- DIAGNOSTIC (v40.0): no logo animation and no player script. Just YouTube's own iframe with muted autoplay,
-         looped over REEL_FROM..REEL_TO, to see whether Safari autoplays it on its own. The pen logo code is
-         still below (reelWithLogo) and is restored by calling it from the render step instead of reel(). -->
-    <div class="vhero-player"><iframe id="reel" class="vhero-yt on" title="Chaar Bhai wedding film reel" tabindex="-1" aria-hidden="true"
-      allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"
-      src="https://www.youtube.com/embed/${REEL}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0&modestbranding=1&loop=1&playlist=${REEL}&start=${REEL_FROM}&end=${REEL_TO}"></iframe></div>
+    <!-- The pen mark stands in until YouTube actually plays (or 7 seconds pass). Reduced
+         motion keeps the completed logo. -->
+    <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
+    <div class="vhero-player"><div id="reel"></div></div>
   </div>
   <div class="vhero-in">
     <h1>
@@ -1558,6 +1556,7 @@ function loadYT(){
   });
   return ytReady;
 }
+if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
 function firstHeroVisit(){
@@ -1571,7 +1570,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   const header=document.getElementById('hdr'),small=header.querySelector('.brand img');
   let disposed=false,played=false,settling=false,frame=0,flight=null,morph=null,pen=null;
   let started=0,progress=0;
-  const HOLD=2000;   // the hero logo stays for this long, then lands in the header and the video underneath is revealed, whatever the player is doing
+  const MAX_WAIT=7000;   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
   if(firstVisit)small.classList.add('cb-brand-in-flight');
@@ -1628,19 +1627,22 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){if(played)settle();else setTimeout(()=>{if(!disposed)settle()},HOLD);return;}
+    if(!firstVisit||reduceMotion()){if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
     // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
     pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
     placeholder.querySelector(':scope>img').hidden=true;
     await pen.ready;
     if(disposed)return;
     started=performance.now();
-    // The drawing takes a fixed HOLD, not as long as the video takes to start, then the mark lands in the header.
+    // The drawing runs for as long as the video takes to start (it slows towards the end so it never looks finished early),
+    // and the mark lands in the header the moment the video plays, or after MAX_WAIT at the latest.
     const draw=now=>{
       if(disposed||settling)return;
-      progress=Math.min(1,(now-started)/HOLD);
+      const t=now-started;
+      if(played){settle();return;}
+      if(t>=MAX_WAIT){settle();return;}
+      progress=Math.min(.94,1-Math.exp(-t/3000));
       pen.seek(progress*pen.drawEnd);
-      if(progress===1){settle();return;}
       frame=requestAnimationFrame(draw);
     };
     frame=requestAnimationFrame(draw);
@@ -1650,17 +1652,15 @@ function homeLogo(placeholder,firstVisit,reveal){
     playing(){
       if(disposed||played)return;
       played=true;
-      // first visit: the pen keeps its fixed time. Returning visit: the still logo leaves as soon as the video plays.
-      if(!firstVisit)ready.then(()=>{if(!disposed)settle()});
+      ready.then(()=>{if(!disposed)settle()});
     }
   };
 }
-/* The hero with the pen logo and the player script. Not used while the plain iframe above is being tried. */
-function reelWithLogo(){
+function reel(){
   if(heroLogo){heroLogo.dispose();heroLogo=null;}
   const el=document.getElementById('reel');if(!el)return;
   const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
-  // shows the video: called when the logo lands (a fixed time after it appears) or when the video plays, whichever comes first
+  // shows the video: called when the video plays or when the logo lands after its safety timeout, whichever comes first
   let revealed=false;
   const reveal=()=>{revealed=true;const f=playerShell.querySelector('iframe');if(f)f.classList.add('on');playerShell.classList.add('is-playing')};
   heroLogo=homeLogo(placeholder,firstHeroVisit(),reveal);const logo=heroLogo;
@@ -1673,26 +1673,15 @@ function reelWithLogo(){
   if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
     if(!document.body.contains(el))return;          // left the home page meanwhile
-    // This is the player exactly as it was when the hero showed a still photo and Safari autoplayed it: the API builds
-    // the iframe (hidden at opacity 0, nothing laid over it), autoplay and mute in the URL, start/end in the URL.
-    // The pen logo is a separate overlay that never blocks it. Only the standard embed host and the origin are new.
+    // Plain YouTube autoplay (autoplay=1, mute=1, start/end in the URL) and no retry loop: browsers either start it or they
+    // don't, and a script poking it every second made Safari cycle between a spinner and a play button. The iframe sits
+    // at opacity 0 with nothing over it. The pen logo is a separate overlay that never blocks it.
     const p=new YT.Player(el,{
       videoId:REEL,
       playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
         onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');if(revealed)f.classList.add('on');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
-          f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
-          // browsers can hold back the first play (a tab still in the background,
-          // a slow start), so nudge it a few times, and again when the tab comes
-          // into view or the visitor first scrolls or taps
-          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'){e.target.mute();e.target.playVideo()}};
-          let tries=0;const t=setInterval(()=>{if(shown||++tries>6||!document.body.contains(f))return clearInterval(t);nudge()},1500);
-          const once=()=>{nudge();if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);document.removeEventListener('visibilitychange',once)}};
-          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);document.addEventListener('visibilitychange',once);
-          // browsers pause video in a background tab; pick it back up on return
-          const resume=()=>{if(!document.body.contains(f))return document.removeEventListener('visibilitychange',resume);
-            if(document.visibilityState==='visible'&&e.target.getPlayerState()!==YT.PlayerState.PLAYING){e.target.mute();e.target.playVideo()}};
-          document.addEventListener('visibilitychange',resume);
+          f.title='Chaar Bhai wedding film reel';
           // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
           const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
             const t=e.target.getCurrentTime&&e.target.getCurrentTime();
@@ -1709,8 +1698,6 @@ function reelWithLogo(){
     });
   });
 }
-
-function reel(){if(heroLogo){heroLogo.dispose();heroLogo=null}}   // plain iframe: nothing to start
 
 /* Studio Ninja's form, loaded once per visit. snLoad() runs as soon as the
    site has settled (or straight away when the visit starts on Contact), so

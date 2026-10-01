@@ -1623,6 +1623,9 @@ function reel(){
         onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the logo, never YouTube's error screen
       }
     });
+    // Where autoplay is refused (iPhone Low Power Mode), the first tap or key press is a real gesture: start it once then, no retry loop
+    const kick=()=>{if(!shown&&p&&p.playVideo)try{p.playVideo()}catch(e){}};
+    document.addEventListener('pointerdown',kick,{once:true,passive:true});document.addEventListener('keydown',kick,{once:true,passive:true});
   });
 }
 

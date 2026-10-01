@@ -1670,10 +1670,15 @@ function reel(){
   // local server) rather than double-clicked.
   if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
-    if(!document.body.contains(el))return;          // left the home page meanwhile
-    const p=new YT.Player(el,{
-      videoId:REEL,
-      playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
+    if(!el.isConnected)return;          // left the home page meanwhile
+    // Build the iframe ourselves so it carries allow="autoplay" from the start: iOS Safari and Chrome
+    // only start a muted autoplay inside an embed that was granted it before it navigated.
+    const q=new URLSearchParams({enablejsapi:1,origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO});
+    const fr=document.createElement('iframe');
+    fr.id='reel';fr.allow='autoplay; encrypted-media; picture-in-picture';fr.referrerPolicy='strict-origin-when-cross-origin';
+    fr.src='https://www.youtube.com/embed/'+REEL+'?'+q;
+    el.replaceWith(fr);
+    const p=new YT.Player(fr,{
       events:{
         onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.referrerPolicy='strict-origin-when-cross-origin';f.setAttribute('aria-hidden','true');
           f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
@@ -1681,7 +1686,7 @@ function reel(){
           // a slow start), so nudge it a few times, and again when the tab comes
           // into view or the visitor first scrolls or taps
           const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'){e.target.mute();e.target.playVideo()}};
-          let tries=0;const t=setInterval(()=>{if(shown||++tries>6||!document.body.contains(f))return clearInterval(t);nudge()},1500);
+          let tries=0;const t=setInterval(()=>{if(shown||++tries>40||!document.body.contains(f))return clearInterval(t);nudge()},1500);
           const once=()=>{nudge();if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);document.removeEventListener('visibilitychange',once)}};
           addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);document.addEventListener('visibilitychange',once);
           // browsers pause video in a background tab; pick it back up on return

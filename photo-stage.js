@@ -200,8 +200,17 @@ function toStage(){
   if(!shown())return false;
   const t=slideTop(0);
   if(scrollY>=t-4)return false;
-  S.lock=1;clearTimeout(S.lockT);S.lockT=setTimeout(()=>{if(S)S.lock=0},S.reduce?200:800);
-  scrollTo({top:t,behavior:S.reduce?'instant':'smooth'});
+  S.lock=1;
+  if(S.reduce){scrollTo({top:t,behavior:'instant'});S.lock=0;return true}
+  /* our own eased glide with the snap switched off while it runs (the browser's smooth scroll fights the snap points: a fast jump, then a slow drift) */
+  const y0=scrollY,dist=t-y0,dur=Math.min(900,420+Math.abs(dist)*.35),t0=performance.now(),ease=x=>1-Math.pow(1-x,4);
+  const el=document.documentElement;el.classList.add('ps-fly');
+  const stop=()=>{el.classList.remove('ps-fly');if(S)S.lock=0};
+  (function f(now){
+    if(!S){el.classList.remove('ps-fly');return}
+    const k=Math.min(1,(now-t0)/dur);scrollTo(0,y0+dist*ease(k));
+    if(k<1)requestAnimationFrame(f);else{scrollTo(0,t);stop()}
+  })(t0);
   return true;
 }
 function onWheel(e){

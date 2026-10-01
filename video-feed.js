@@ -636,6 +636,9 @@ function onKey(e){
     return;
   }
   if(S.away)return;                                      // the feed isn't on screen
+  if((k==='ArrowUp'||k==='PageUp')&&S.active===0&&S.aligned){       // Up on the first film goes back to the menu
+    e.preventDefault();scrollTo({top:0,behavior:S.reduce?'instant':'smooth'});S.aligned=false;return;
+  }
   if(k==='ArrowDown'||k==='j'||k==='PageDown'){e.preventDefault();step(1)}
   else if(k==='ArrowUp'||k==='k'||k==='PageUp'){e.preventDefault();step(-1)}
   else if(k===' '||k==='Spacebar'){

@@ -76,7 +76,38 @@ function loadYT(){
 /* ---------- the Photos | Films switch. There is one, in the site header, on Work only (app.js puts it there) ---------- */
 function toggleHTML(active){
   const a=(v,href,label)=>`<a href="${href}"${active===v?' aria-current="true"':''}>${label}</a>`;
-  return `<div class="wk-tog" role="group" aria-label="Work view">${a('photos','#/portfolio','Photos')}${a('videos',HASH,'Films')}</div>`;
+  return `<div class="wk-tog" role="group" aria-label="Work view">${a('photos','#/portfolio','Photographs')}<span class="sep" aria-hidden="true"></span>${a('videos',HASH,'Films')}<i class="ul" aria-hidden="true"></i></div>`;
+}
+
+/* The gold underline under the current word is one element that slides to it (transform only). Used by the switch
+   and by the category line: `group` holds the items, an <i class="ul">, and the current item has aria-current. */
+function moveUL(group){
+  const ul=group&&group.querySelector('.ul'),cur=group&&group.querySelector('[aria-current="true"]');
+  if(!ul||!cur||!cur.offsetWidth)return;
+  group.style.setProperty('--x',cur.offsetLeft+'px');group.style.setProperty('--w',cur.offsetWidth);
+  if(!ul.dataset.on)requestAnimationFrame(()=>{ul.dataset.on='1'});   // the first placement is not animated
+}
+function syncUL(){document.querySelectorAll('.wk-tog,.cl-in').forEach(moveUL)}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(syncUL);
+{let w=innerWidth;addEventListener('resize',()=>{if(innerWidth!==w){w=innerWidth;syncUL()}},{passive:true})}
+
+/* the category line, shared by Photographs and Films: items = [[index into WORK_CATS, first slide], ...] */
+function catLineHTML(items,label){
+  const cats=window.WORK_CATS||[];
+  return `<div class="cl" role="group" aria-label="${label}"><div class="cl-in">${items.map(([k,first])=>
+    `<button class="cl-b" type="button" data-cat="${k}" data-first="${first}">${esc(cats[k])}</button>`).join('')}<i class="ul" aria-hidden="true"></i></div></div>`;
+}
+/* make `k` the current category, scroll the line so it shows, slide the underline to it */
+function markCat(root,k,reduce){
+  const line=root.querySelector('.cl'),inn=root.querySelector('.cl-in');if(!line)return;
+  inn.querySelectorAll('.cl-b').forEach(b=>{
+    const on=+b.dataset.cat===k;
+    b.classList.toggle('on',on);
+    if(on){b.setAttribute('aria-current','true');
+      line.scrollTo({left:b.offsetLeft-line.clientWidth/2+b.offsetWidth/2,behavior:reduce?'auto':'smooth'})}
+    else b.removeAttribute('aria-current');
+  });
+  moveUL(inn);
 }
 
 /* keep the switch's highlight in step with the view */
@@ -85,6 +116,7 @@ function markToggle(view){
     if(a.getAttribute('href')===(view==='videos'?HASH:'#/portfolio'))a.setAttribute('aria-current','true');
     else a.removeAttribute('aria-current');
   });
+  document.querySelectorAll('.wk-tog').forEach(moveUL);
 }
 
 /* ---------- state while the feed is open ---------- */
@@ -95,12 +127,15 @@ const typeWord=d=>d.mode==='hl'?'Highlight':'Full film';
 const metaText=d=>{const b=d.it.label||d.ev.event;return d.mode==='ff'&&/film/i.test(b)?b:b+' · '+typeWord(d)};
 const ariaText=d=>d.it.couple+', '+metaText(d).replace(' · ',' ');
 
+/* the six film groups sit under the shared category names (see WORK_CATS in app.js) */
+const CAT_OF={'shendi':'Henna','haldi-holud':'Henna','nikkah':'Ceremony','wedding-ceremony':'Ceremony',
+  'reception-walima':'Reception','engagements-shoots':'Portraits'};
 function flatten(){
-  const out=[];
+  const out=[],cats=window.WORK_CATS||[];
   ((window.VIDEOS&&window.VIDEOS.events)||[]).forEach((ev,ei)=>ev.items.forEach(it=>{
-    if(it.highlight||it.fullFilm)out.push({ev,ei,it,mode:it.highlight?'hl':'ff'});
+    if(it.highlight||it.fullFilm)out.push({ev,ei,cat:Math.max(0,cats.indexOf(CAT_OF[ev.slug])),it,mode:it.highlight?'hl':'ff'});
   }));
-  return out;
+  return out.map((d,n)=>[d,n]).sort((x,y)=>x[0].cat-y[0].cat||x[1]-y[1]).map(x=>x[0]);   // wedding-week order, same order inside
 }
 function indexOfId(data,id){
   for(let i=0;i<data.length;i++){
@@ -156,19 +191,16 @@ function open(id){
 
   const root=document.createElement('div');
   root.id='vf';root.className='vf';
-  root.innerHTML=`<div class="vf-bar"><div class="vf-chips" role="group" aria-label="Jump to an event">${
-      window.VIDEOS.events.map((e,ei)=>{
-        const first=data.findIndex(d=>d.ei===ei);
-        return first<0?'':`<button class="vf-chip" type="button" data-ei="${ei}" data-first="${first}" aria-label="Jump to ${esc(e.event)} films">${esc(e.event)}</button>`;
-      }).join('')}</div></div>
+  const catsOn=[];data.forEach((d,i)=>{if(!catsOn.some(c=>c[0]===d.cat))catsOn.push([d.cat,i])});
+  root.innerHTML=`<div class="vf-bar">${catLineHTML(catsOn,'Jump to a category of films')}</div>
     <div class="vf-feed">${data.map(slideHTML).join('')}</div>
     <p class="vf-sr" role="status" aria-live="polite"></p>`;
-  host.textContent='';host.appendChild(root);host.hidden=false;markToggle('videos');warm();
+  root.classList.add('wk-in');host.textContent='';host.appendChild(root);host.hidden=false;markToggle('videos');warm();
   const ph=document.getElementById('wk-photos');if(ph)ph.hidden=true;
   document.body.classList.add('vf-on');
 
   S={data,root,feed:$('.vf-feed',root),slides:[...root.querySelectorAll('.vf-slide')],
-     chips:[...root.querySelectorAll('.vf-chip')],chipBar:$('.vf-chips',root),live:$('.vf-sr[role=status]',root),
+     live:$('.vf-sr[role=status]',root),
      players:new Map(),active:-1,target:null,soundOn:readSound(),reduce:reduceMotion(),
      noAuto:reduceMotion()||saveData(),away:true,inView:false,host,lastEv:-1,deb:0,cand:-1,flashT:0};
 
@@ -238,7 +270,7 @@ function close(opts){
   document.removeEventListener('keydown',onKey);
   document.removeEventListener('visibilitychange',onVis);
   s.root.remove();s.host.hidden=true;markToggle('photos');
-  const ph=document.getElementById('wk-photos');if(ph)ph.hidden=false;
+  const ph=document.getElementById('wk-photos');if(ph){ph.hidden=false;ph.classList.remove('wk-in');void ph.offsetWidth;ph.classList.add('wk-in')}
   document.body.classList.remove('vf-on','vf-in');
   if(opts&&opts.focus){
     scrollTo({top:0,behavior:'instant'});
@@ -404,13 +436,7 @@ function activate(i){
   syncWindow();loadThumbs();
   S.slides.forEach((el,k)=>{el.inert=k!==i;el.classList.toggle('is-active',k===i)});
   S.lastEv=d.ei;
-  S.chips.forEach(c=>{
-    const on=+c.dataset.ei===d.ei;
-    c.classList.toggle('on',on);
-    if(on){c.setAttribute('aria-current','true');
-      const bar=S.chipBar;bar.scrollTo({left:c.offsetLeft-bar.clientWidth/2+c.offsetWidth/2,behavior:S.reduce?'auto':'smooth'})}
-    else c.removeAttribute('aria-current');
-  });
+  markCat(S.root,d.cat,S.reduce);
   if(prevEv!==d.ei)flash(i);
   S.live.textContent=ariaText(d);
   setHash();
@@ -553,7 +579,7 @@ function exitFull(){
 function onClick(e){
   if(!S)return;
   const t=e.target;
-  const chip=t.closest('.vf-chip');
+  const chip=t.closest('.cl-b');
   if(chip){scrollTo_(+chip.dataset.first);return}
   if(t.closest('.vf-hit')){toggle();return}
   if(t.closest('.vf-sound')){setSound(true);return}
@@ -614,5 +640,5 @@ function onImg(e){
   if(e.type==='error'||im.naturalWidth===120){im.dataset.lo='1';im.src=thumbLo(im.dataset.id)}
 }
 
-window.VF={toggleHTML,open,close,pauseAll,isOpen:()=>!!S};
+window.VF={toggleHTML,open,close,pauseAll,isOpen:()=>!!S,moveUL,syncUL,catLineHTML,markCat};
 })();

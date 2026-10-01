@@ -309,71 +309,8 @@ button.irow>*{transition:transform .3s var(--ease)}
   .irow .c,.irow .y{display:none}.irow .thumb{width:50px}
   .irow.plain{grid-template-columns:1fr;row-gap:8px}}
 
-/* chapter rail */
-.rail{position:fixed;right:calc(var(--pad) - 4px);top:50%;transform:translateY(-50%);z-index:700;
-  display:flex;flex-direction:column;gap:1px;align-items:flex-end;transition:opacity .32s var(--ease)}
-/* the rail is moved to <body> so #main's slide can't unfix it; it fades with the page */
-.rail.out{opacity:0;transition:opacity .15s ease-out;pointer-events:none}
-.rail button{display:flex;align-items:center;gap:11px;padding:7px 4px;color:var(--faint);
-  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;transition:color .3s var(--ease)}
-.rail button .lb{opacity:0;transform:translateX(26px);transition:opacity .3s var(--ease),transform .3s var(--ease);white-space:nowrap}
-.rail button .dt{width:32px;height:1px;background:currentColor;transform:scaleX(.4375);transform-origin:right;
-  transition:transform .3s var(--ease);flex:0 0 auto}
-.rail button.on{color:var(--gold)}
-.rail button.on .lb{opacity:1;transform:none}
-.rail button.on .dt{transform:scaleX(1)}
-.rail-space{display:none}
-@media(max-width:900px){
-  .rail{right:0;left:0;top:auto;bottom:0;transform:none;flex-direction:row;gap:0;align-items:stretch;
-    overflow-x:auto;background:var(--bar);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
-    border-top:1px solid var(--line);padding:0 8px;scrollbar-width:none}
-  .rail::-webkit-scrollbar{display:none}
-  .rail button{flex:0 0 auto;padding:15px 13px;color:var(--soft)}
-  .rail button .dt{display:none}
-  .rail button .lb{opacity:1;transform:none}
-  .rail-space{display:block;height:54px}
-}
-
-/* chapters and sequences */
-.chapter{padding-top:clamp(58px,7.5vw,116px);scroll-margin-top:78px}
-.ch-head{display:grid;grid-template-columns:78px 1fr;gap:22px;align-items:start;
-  padding-bottom:clamp(26px,3.2vw,46px);border-bottom:1px solid var(--line)}
-.ch-no{color:var(--gold);font-size:var(--t-label);font-weight:500;letter-spacing:.14em;padding-top:14px}
-.ch-title{font-family:var(--f-display);font-weight:400;
-  font-size:var(--t-headline);line-height:1.06;letter-spacing:-.015em}
-.ch-alt{color:var(--gold);margin-top:14px;letter-spacing:.14em}
-.ch-desc{color:var(--dim);max-width:58ch;margin-top:14px;font-size:var(--t-body);line-height:1.65}
-@media(max-width:760px){.ch-head{grid-template-columns:1fr;gap:8px}.ch-no{padding-top:0}}
-
-.seq{padding-top:clamp(26px,3.2vw,46px)}
-.seq-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;
-  padding-bottom:24px}
-.seq-title{font-family:var(--f-serif);font-weight:400;
-  font-size:var(--t-title);line-height:1.2;letter-spacing:-.01em}
-.seq-meta{color:var(--soft);margin-top:9px}
-/* the couple, then small tags: which chapter, the event, the venue, the city */
-.seq-tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
-.seq-tags li{font-size:var(--t-label);font-weight:500;letter-spacing:.12em;text-transform:uppercase;line-height:1.2;
-  color:var(--dim);border:1px solid var(--line);border-radius:var(--arch);padding:6px 9px 5px}
-.seq-tags .tag-ch{color:var(--gold);border-color:var(--gold-2,var(--gold))}
-/* a chapter's strips hang off a line from its number, so it's clear which section a row is in */
-.ch-body{position:relative}
-.seq+.seq{margin-top:clamp(14px,1.8vw,24px)}
-@media(min-width:761px){
-  .ch-body{margin-left:100px}
-  .ch-body::before{content:'';position:absolute;left:-94px;top:0;bottom:0;width:1px;
-    background:linear-gradient(var(--gold-2,var(--gold)),var(--line) 70%,transparent)}
-}
-.seq-ctrl{display:flex;align-items:center;gap:12px}
+/* sequences: a couple's strip of frames, used by the Work stage */
 .seq-count{color:var(--gold);font-variant-numeric:tabular-nums;font-size:var(--t-label);font-weight:500;letter-spacing:.14em}
-.seq-ctrl button{width:40px;height:40px;border:1px solid var(--line);border-radius:var(--arch);
-  display:grid;place-items:center;color:var(--dim);
-  transition:border-color .25s var(--ease),color .25s var(--ease),opacity .25s var(--ease),transform .16s ease-out}
-.seq-ctrl button:active{transform:scale(.95)}
-.seq-ctrl button svg{width:15px;height:15px}
-.seq-ctrl button:hover{border-color:var(--gold);color:var(--gold)}
-.seq-ctrl button:disabled{opacity:.22;pointer-events:none}
-
 .seq-strip{display:flex;gap:clamp(10px,1.4vw,20px);overflow-x:auto;scroll-snap-type:x mandatory;
   scrollbar-width:none;-ms-overflow-style:none;cursor:grab;padding-bottom:2px}
 .seq-strip::-webkit-scrollbar{display:none}
@@ -383,9 +320,6 @@ button.irow>*{transition:transform .3s var(--ease)}
 .frame{--w:clamp(196px,23vw,310px);flex:0 0 min(88vw,calc(var(--w)*4/3*var(--ar,.75)));scroll-snap-align:start}
 .frame .fr-img{aspect-ratio:var(--ar,3/4);overflow:hidden;background:var(--ink-2);position:relative;
   border-radius:var(--arch)}
-.frame .fr-img::after{content:'';position:absolute;inset:0;border-radius:var(--arch);
-  border:1px solid transparent;transition:border-color .3s var(--ease);pointer-events:none}
-.frame img{transition:transform .4s var(--ease)}
 .fr-cap{display:flex;gap:11px;padding-top:13px;color:var(--dim);font-size:var(--t-small);line-height:1.6}
 .fr-no{color:var(--gold);font-variant-numeric:tabular-nums;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;
   padding-top:3px;flex:0 0 auto}
@@ -851,24 +785,71 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
   nav.links a:hover::after{transform:scaleX(1)}
   .btn:hover i,.book:hover i{clip-path:inset(0 0 0 0)}
   button.irow:hover .t{color:var(--gold)}
-  .rail button:hover{color:var(--paper)}
-  .frame:hover .fr-img::after{border-color:var(--gline)}
   .fc a:hover{color:var(--gold)}
   .theme-sw:hover{color:var(--gold);border-color:var(--gold)}
   .pr .filter-toggle button:not(.is-active):hover,.pr .currency-toggle button:not(.is-active):hover{color:var(--gold-hi)}
   .stepper button:hover,.reset-btn:hover{border-color:var(--gold);color:var(--gold)}
   .pill:hover .pill-inner{border-color:var(--gline)}
 }
-/* inactive rail markers are drawn short from the right, so a hovered label
-   sits 18px further in to keep the same gap it has when active */
-@media (hover:hover) and (pointer:fine) and (min-width:901px){
-  .rail button:not(.on):hover .lb{opacity:1;transform:translateX(18px)}
-}
 /* hover movement, dropped entirely for reduced motion */
 @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
   button.irow:hover>:nth-child(-n+3){transform:translateX(22px)}
   button.irow:hover .thumb img{transform:scale(1.06)}
-  .frame:hover img{transform:scale(1.05)}
+}
+
+/* ============ WORK: PHOTOGRAPHS STAGE (photo-stage.js) ============
+   Snaps one couple at a time like the Films feed, but a slide is 84% of the stage, so the next couple peeks in
+   below it. The photos sit in a hairline frame, never edge to edge. */
+.ps{--psb:48px;--ps-h0:calc(100svh - var(--hh,84px));--ps-sh:calc((var(--ps-h0) - var(--psb)) * .84);--ps-chrome:250px;
+  --fh:max(150px,min(58svh,calc(var(--ps-sh) - var(--ps-chrome))));
+  position:relative;height:var(--ps-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line)}
+.ps-bar{position:absolute;top:0;left:0;right:0;height:var(--psb);display:flex;align-items:center;
+  border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
+.ps-bar .cl{flex:1;min-width:0}
+.ps-feed{position:absolute;left:0;right:0;top:var(--psb);bottom:0;overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+.ps-feed::-webkit-scrollbar{display:none}
+.ps-feed:focus-visible{outline:1px solid var(--gold);outline-offset:-3px}
+.ps-slide{box-sizing:border-box;height:var(--ps-sh);padding-top:clamp(16px,2.6svh,26px);display:flex;flex-direction:column;
+  border-bottom:1px solid var(--line);scroll-snap-align:start;scroll-snap-stop:always}
+.ps-end{height:calc((var(--ps-h0) - var(--psb)) * .16)}
+.ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
+.ps-kick,.ps-tags{margin:0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-kick{color:var(--soft)}
+.ps-no{margin-right:10px;color:var(--gold);font-variant-numeric:tabular-nums}
+.ps-desc{margin:6px 0 0;font-family:var(--f-serif);font-size:14px;line-height:1.5;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-id{margin-top:10px}
+.ps-name{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(26px,3vw,40px);line-height:1.12;letter-spacing:-.01em}
+.ps-tags{margin-top:6px;letter-spacing:.12em;color:var(--dim)}
+.ps-body{flex:1 1 auto;min-height:0;margin-top:12px;display:flex;flex-direction:column}
+.ps .seq-strip{flex:0 0 auto;padding:8px var(--pad);scroll-padding-inline:var(--pad);overflow-y:hidden;overscroll-behavior-x:contain;gap:clamp(18px,2.4vw,32px)}
+.ps .frame{flex:0 0 auto;width:min(calc(var(--fh) * var(--ar,.75)),calc(100vw - 2 * var(--pad) - 4px))}
+.ps .frame .fr-img{width:100%;border-radius:var(--arch);outline:1px solid var(--line-2);outline-offset:6px}
+.ps .fr-cap{padding-top:16px;font-size:13px;line-height:1.4}
+.ps .fr-cap span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ps-foot{display:flex;align-items:center;justify-content:space-between;padding-top:2px}
+.ps-arrows{display:flex;gap:4px;margin-right:-12px}
+.ps-arrows button{width:44px;height:44px;display:grid;place-items:center;color:var(--dim);touch-action:manipulation;
+  transition:color .15s var(--ease),opacity .15s var(--ease),transform .12s ease-out}
+.ps-arrows button:active{transform:scale(.97)}
+.ps-arrows button svg{width:15px;height:15px}
+.ps-arrows button:disabled{opacity:.22;pointer-events:none}
+@media (hover:hover){.ps-arrows button:hover{color:var(--gold)}}
+.ps .seq-bar{margin:0 var(--pad)}
+/* the couple's name and tags fade up once when their slide becomes the current one */
+@keyframes psIn{from{opacity:0;transform:translateY(8px)}}
+.ps-slide.is-active .ps-id{animation:psIn .24s var(--ease) both}
+@media (prefers-reduced-motion:reduce){
+  @keyframes psIn{from{opacity:0}}
+  .ul[data-on]{transition:none}
+  .wk-tog a:active,.cl-b:active,.ps-arrows button:active{transform:none}
+}
+/* a phone on its side: no peek, the whole stage is the slide, and the small print goes */
+@media (orientation:landscape) and (max-height:540px){
+  .ps{--psb:42px;--ps-sh:calc(var(--ps-h0) - var(--psb));--ps-chrome:150px}
+  .ps-end,.ps-desc,.ps-tags{display:none}
+  .cl-b{min-height:40px}
 }
 
 /* ============ REDUCED MOTION ============
@@ -894,7 +875,6 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
    and redraws on every scroll frame; a near-solid bar looks almost the same. */
 @media (hover:none){
   header::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,20,28,.97)}   /* the header is navy in both themes */
-  .rail{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bar-solid,var(--bar))}
 }
 /* Work strips that are far from the screen: not scrollable (so no scroll layer), no pictures. See photoWindow(). */
 .seq-strip.cold{overflow:hidden}
@@ -904,7 +884,6 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
 header{flex-wrap:wrap}
 .hdr-sub{flex:0 0 100%;margin-top:12px;position:relative;z-index:1}
 .hdr-sub[hidden],body.locked .hdr-sub{display:none}
-.hdr-sub .wk-tog a{min-height:32px;padding:0 16px}
 
 /* ============ WORK: PHOTOS | FILMS ============
    The toggle sits under the Work heading and description. Below it the page shows
@@ -912,29 +891,36 @@ header{flex-wrap:wrap}
    one block, as tall as the screen under the header. */
 .wk-tog-row{margin-top:clamp(22px,3vw,34px)}
 #wk-photos[hidden],#wk-videos[hidden]{display:none}
-.wk-tog{display:inline-flex;padding:2px;border:1px solid var(--line-2);border-radius:var(--arch);background:var(--ink-2)}
-.wk-tog a{display:inline-flex;align-items:center;min-height:34px;padding:0 18px;border-radius:var(--arch);
-  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);
-  transition:color .2s var(--ease),background .2s var(--ease)}
-.wk-tog a[aria-current]{background:var(--gold-wash);color:var(--gold);box-shadow:inset 0 0 0 1px var(--gline)}
-@media (hover:hover){.wk-tog a:not([aria-current]):hover{color:var(--paper)}}
-
-body.vf-on>.rail{display:none}
+/* ---- the Photographs | Films switch (rides in the header) and the category line (top of both stages) ----
+   No boxes, no fills: serif words, a hairline between, and one gold underline that slides to the current item
+   (transform only). The current item is gold. See VF.moveUL in video-feed.js. */
+.wk-tog{position:relative;display:inline-flex;align-items:center}
+.wk-tog a{display:inline-flex;align-items:center;min-height:36px;padding:0 2px;font-family:var(--f-serif);font-size:19px;line-height:1;
+  color:var(--soft);touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .15s var(--ease),transform .12s ease-out}
+.wk-tog a[aria-current]{color:var(--gold)}
+.wk-tog .sep{width:1px;height:16px;margin:0 16px;background:var(--line-2)}
+.wk-tog .ul{bottom:5px}
+.ul{position:absolute;left:0;bottom:10px;width:1px;height:1px;background:var(--gold);transform-origin:0 50%;
+  transform:translateX(var(--x,0px)) scaleX(var(--w,0));pointer-events:none}
+.ul[data-on]{transition:transform .2s var(--ease)}
+.cl{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}
+.cl::-webkit-scrollbar{display:none}
+.cl-in{position:relative;display:flex;gap:30px;width:max-content;min-width:100%;padding:0 var(--pad)}
+.cl-b{position:relative;flex:0 0 auto;min-height:44px;padding:0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  white-space:nowrap;color:var(--soft);touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .15s var(--ease),transform .12s ease-out}
+.cl-b+.cl-b::before{content:'\00b7';position:absolute;left:-18px;top:50%;transform:translateY(-50%);color:var(--soft)}
+.cl-b.on{color:var(--gold)}
+.wk-tog a:active,.cl-b:active{transform:scale(.97)}
+@media (hover:hover){.wk-tog a:not([aria-current]):hover,.cl-b:not(.on):hover{color:var(--paper)}}
+.wk-tog a:focus-visible,.cl-b:focus-visible{outline:1px solid var(--gold);outline-offset:4px}
+@keyframes wkIn{from{opacity:0}}
+.wk-in{animation:wkIn .2s linear both}   /* Photographs and Films fade in over each other: opacity only */
 
 .vf{--vfb:56px;--vf-cap:128px;--vf-h0:calc(100svh - var(--hh,84px));--vf-h:calc(var(--vf-h0) - var(--vfb));
   position:relative;height:var(--vf-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line)}
 .vf-bar{position:absolute;top:0;left:0;right:0;height:var(--vfb);display:flex;align-items:center;gap:14px;
-  padding:0 var(--pad);border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
-.vf-bar .wk-tog{flex:0 0 auto}
-.vf-chips{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
-  overscroll-behavior-x:contain;padding:2px 0}
-.vf-chips::-webkit-scrollbar{display:none}
-.vf-chip{flex:0 0 auto;min-height:36px;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--arch);
-  font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
-  color:var(--soft);touch-action:manipulation;transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease)}
-.vf-chip.on{color:var(--gold);border-color:var(--gline);background:var(--gold-wash)}
-@media (hover:hover){.vf-chip:not(.on):hover{color:var(--paper);border-color:var(--gline)}}
-
+  padding:0;border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
+.vf-bar .cl{flex:1;min-width:0}
 .vf-feed{position:absolute;left:0;right:0;top:var(--vfb);bottom:0;overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
 .vf-feed::-webkit-scrollbar{display:none}
@@ -1003,7 +989,6 @@ body.vf-on>.rail{display:none}
   .hdr-sub{flex:0 0 auto;order:1;margin:0 auto 0 18px}
   .theme-sw,.burger{order:2}
   .vf{--vfb:46px}
-  .vf-chip{min-height:30px;padding:0 12px}
   .vf-slide{padding:8px var(--pad)}
   .vf-wrap{width:100%;height:100%;display:flex;align-items:center;gap:clamp(14px,3vw,28px)}
   .vf-frame{flex:0 0 auto;width:min(66%,calc((var(--vf-h) - 16px) * 16 / 9))}
@@ -1022,7 +1007,7 @@ body.vf-on>.rail{display:none}
 .vf-frame.is-full{position:fixed;inset:0;z-index:3000;width:auto;aspect-ratio:auto}
 .vf-frame.is-full .vf-thumb{object-fit:contain}
 body.vf-full{overflow:hidden}
-body.vf-full header,body.vf-full>.rail{visibility:hidden}
+body.vf-full header{visibility:hidden}
 @media (max-width:620px){.vf-cap{padding:12px var(--pad) 0}.vf-yt{display:none}}
 @media (prefers-reduced-motion:reduce){.vf-mount{transition:none}.vf-tick{animation-duration:.01s}}
 

@@ -134,7 +134,6 @@ P['/']=()=>`
   <div class="vhero-media">
     <!-- The pen mark stands in until YouTube actually plays. Reduced
          motion and blocked playback retain the completed logo. -->
-    <div class="cb-video-cover" aria-hidden="true"></div>
     <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
     <div class="vhero-player"><div id="reel"></div></div>
   </div>
@@ -1671,50 +1670,39 @@ function reel(){
   // local server) rather than double-clicked.
   if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
-    if(!el.isConnected)return;          // left the home page meanwhile
-    // The site builds the iframe so it carries allow="autoplay" and a muted autoplay URL from the first load
-    // (Safari decides about muted autoplay when the embed loads). No start/end in the URL: Safari stalled in
-    // buffering with them, so the reel is sent to REEL_FROM once it plays.
-    const q=new URLSearchParams({enablejsapi:1,origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1});
-    const fr=document.createElement('iframe');
-    fr.id='reel';fr.allow='autoplay; encrypted-media; picture-in-picture';fr.referrerPolicy='strict-origin-when-cross-origin';
-    fr.src='https://www.youtube.com/embed/'+REEL+'?'+q;
-    el.replaceWith(fr);
-    const p=new YT.Player(fr,{
+    if(!document.body.contains(el))return;          // left the home page meanwhile
+    // This is the player exactly as it was when the hero showed a still photo and Safari autoplayed it: the API builds
+    // the iframe (hidden at opacity 0, nothing laid over it), autoplay and mute in the URL, start/end in the URL.
+    // The pen logo is a separate overlay that never blocks it. Only the standard embed host and the origin are new.
+    const p=new YT.Player(el,{
+      videoId:REEL,
+      playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
-        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.referrerPolicy='strict-origin-when-cross-origin';f.setAttribute('aria-hidden','true');
-          f.title='Chaar Bhai wedding film reel';e.target.mute();preGone.then(()=>{if(!shown&&document.body.contains(f)){e.target.mute();e.target.playVideo()}});
+        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
+          f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
           // browsers can hold back the first play (a tab still in the background,
           // a slow start), so nudge it a few times, and again when the tab comes
           // into view or the visitor first scrolls or taps
-          // only poke a player that is idle: re-sending play to one that is buffering can keep Safari from ever finishing the load
-          const idle=()=>{const st=e.target.getPlayerState();return st!==YT.PlayerState.PLAYING&&st!==YT.PlayerState.BUFFERING};
-          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'&&idle()){e.target.mute();e.target.playVideo()}};
-          let tries=0;const t=setInterval(()=>{if(shown||++tries>60||!document.body.contains(f))return clearInterval(t);nudge()},1000);
-          const once=()=>{if(!shown&&document.body.contains(f)){e.target.mute();e.target.playVideo()}if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);removeEventListener('keydown',once);document.removeEventListener('visibilitychange',once)}};
-          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);addEventListener('keydown',once);document.addEventListener('visibilitychange',once);
+          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'){e.target.mute();e.target.playVideo()}};
+          let tries=0;const t=setInterval(()=>{if(shown||++tries>6||!document.body.contains(f))return clearInterval(t);nudge()},1500);
+          const once=()=>{nudge();if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);document.removeEventListener('visibilitychange',once)}};
+          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);document.addEventListener('visibilitychange',once);
           // browsers pause video in a background tab; pick it back up on return
           const resume=()=>{if(!document.body.contains(f))return document.removeEventListener('visibilitychange',resume);
-            if(document.visibilityState==='visible'&&idle()){e.target.mute();e.target.playVideo()}};
+            if(document.visibilityState==='visible'&&e.target.getPlayerState()!==YT.PlayerState.PLAYING){e.target.mute();e.target.playVideo()}};
           document.addEventListener('visibilitychange',resume);
           // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
           const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
-            if(e.target.getPlayerState()!==YT.PlayerState.PLAYING)return;
             const t=e.target.getCurrentTime&&e.target.getCurrentTime();
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
-          // the reel starts at REEL_FROM: it begins at 0 (no start offset in the URL), so jump there and only reveal once it plays from there
-          if(e.data===YT.PlayerState.PLAYING&&!shown&&e.target.getCurrentTime()<REEL_FROM-.5){e.target.seekTo(REEL_FROM,true);return}
           if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
             shown=true;const f=e.target.getIframe();if(f)f.classList.add('on');
             playerShell.classList.add('is-playing');
-            const cover=playerShell.parentNode.querySelector('.cb-video-cover');
-            if(cover){cover.classList.add('is-leaving');afterTransition(cover,400).then(()=>cover.remove())}
             logo.playing();
           }
           if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}
         },
-        onAutoplayBlocked:()=>{console.info('Chaar Bhai: the browser blocked the hero reel from starting by itself')},
         onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the logo, never YouTube's error screen
       }
     });

@@ -233,7 +233,7 @@ p.lead{font-size:var(--t-lead);line-height:1.7;color:var(--dim);max-width:60ch;f
 
 /* home: one full bleed film */
 .vhero{position:relative;height:100svh;min-height:600px;overflow:hidden;padding:0;display:grid}
-.vhero-media{position:absolute;inset:0;z-index:0;background:var(--ink-2)}
+.vhero-media{position:absolute;inset:0;z-index:0;background:var(--ink)}
 .vhero-media{container-type:size}
 .vhero-media img{width:100%;height:100%;object-fit:cover}
 /* the 16:9 player is sized to cover the hero like object-fit:cover, and
@@ -1054,13 +1054,9 @@ body.vf-full header,body.vf-full>.rail{visibility:hidden}
 /* The global img display rule must not reveal the static fallback during drawing. */
 .vhero .cb-hero-placeholder>img[hidden]{display:none}
 
-/* Keep the iframe rendered for muted autoplay; an opaque cover hides startup UI. */
+/* The iframe stays rendered (opacity 0, as in the version Safari autoplayed) and fades in once it plays. */
 .vhero-player{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.vhero-player .vhero-yt{opacity:1}
-.cb-video-cover{position:absolute;inset:0;z-index:1;background:var(--ink);transition:opacity .35s ease;pointer-events:none}
-.cb-video-cover.is-leaving{opacity:0}
 .vhero .cb-hero-placeholder{z-index:2}
-@media(prefers-reduced-motion:reduce){.cb-video-cover{transition:none}}
 .vhero-player iframe{position:absolute;top:50%;left:50%;border:0;pointer-events:none;background:transparent;
   width:max(100cqw,calc(100cqh*16/9));height:max(100cqh,calc(100cqw*9/16));
   transform:translate(-50%,-50%) scale(1.16)}

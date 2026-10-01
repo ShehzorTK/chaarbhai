@@ -51,11 +51,14 @@
 /* The preloader is a first-visit moment. Once it has played in this tab,
    reloads skip it. Decided here, before the body paints, so it never flashes. */
 try{if(sessionStorage.getItem('cb-loaded')==='1')document.documentElement.classList.add('seen')}catch(e){}
+/* Experiment (v40.2): on a first visit that starts on Home there is no loading screen. The pen logo draws at once
+   and the site comes up around it. cb-pen-boot hides the loading screen and holds the dark background until then. */
+if(!document.documentElement.classList.contains('seen')&&(location.hash===''||location.hash==='#/'))document.documentElement.classList.add('cb-pen-boot');
 /* Light or dark, as the visitor last chose it. Set before paint so the page
    never flashes the other theme. Dark is the house default. */
 try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}
 </script>
-<link rel="stylesheet" href="style.css?v=40.1">
+<link rel="stylesheet" href="style.css?v=40.2">
 </head>
 <body class="locked">
 <button class="skip" type="button" id="skip">Skip to content</button>
@@ -125,11 +128,11 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 </footer>
 
 <script>if(/[?&]debug\b/.test(location.search))document.write('<script src="debug.js"><\/script>')</script>
-<script src="portfolio.js?v=40.1"></script>
-<script src="videos.js?v=40.1"></script>
-<script src="video-feed.js?v=40.1"></script>
-<script src="reviews.js?v=40.1"></script>
-<script src="pen-loader.js?v=40.1"></script>
-<script src="app.js?v=40.1"></script>
+<script src="portfolio.js?v=40.2"></script>
+<script src="videos.js?v=40.2"></script>
+<script src="video-feed.js?v=40.2"></script>
+<script src="reviews.js?v=40.2"></script>
+<script src="pen-loader.js?v=40.2"></script>
+<script src="app.js?v=40.2"></script>
 </body>
 </html>

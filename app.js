@@ -1574,6 +1574,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
   if(firstVisit)small.classList.add('cb-brand-in-flight');
+  if(firstVisit&&!reduceMotion())placeholder.querySelector(':scope>img').hidden=true;   // no flash of the finished logo before the pen starts
   const finishFlight=()=>{
     if(flight)flight.remove();flight=null;
     small.classList.remove('cb-brand-in-flight');header.classList.remove('cb-logo-landing');
@@ -1980,6 +1981,16 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
         track=document.getElementById('ptrack'),
         fill=document.getElementById('lfill');
   fill.src=LOGO;
+
+  if(document.documentElement.classList.contains('cb-pen-boot')){   // experiment: first visit on Home, no loading screen
+    try{sessionStorage.setItem('cb-loaded','1')}catch(e){}
+    pre.setAttribute('aria-busy','false');pre.classList.add('gone');
+    document.body.classList.remove('locked');
+    go();
+    preGoneResolve();                          // the pen starts drawing at once, while the page comes up around it
+    setTimeout(()=>document.documentElement.classList.remove('cb-pen-boot'),1500);
+    return;
+  }
 
   if(document.documentElement.classList.contains('seen')){   // already played in this tab
     document.body.classList.remove('locked');

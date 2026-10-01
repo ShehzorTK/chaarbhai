@@ -108,7 +108,8 @@ p{text-wrap:pretty}
 #pre{position:fixed;inset:0;z-index:10000;background:var(--ink);
   display:grid;place-items:center;transition:opacity .4s var(--ease),visibility .4s}
 #pre.gone{opacity:0;visibility:hidden}
-html.seen #pre{display:none}
+html.seen #pre,html.cb-pen-boot #pre{display:none}
+html.cb-pen-boot body{background:#12141C}   /* dark-mode ink until the hero is up, whatever theme is chosen */
 #pre .wrap,#wkpre .wrap{display:grid;justify-items:center;gap:30px;padding:20px}
 /* the logo builds upward as the site loads */
 .logo-build{position:relative;width:clamp(210px,30vw,430px);line-height:0}

@@ -132,10 +132,12 @@ const P={};
 P['/']=()=>`
 <section class="vhero">
   <div class="vhero-media">
-    <!-- The pen mark stands in until YouTube actually plays. Reduced
-         motion and blocked playback retain the completed logo. -->
-    <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
-    <div class="vhero-player"><div id="reel"></div></div>
+    <!-- DIAGNOSTIC (v40.0): no logo animation and no player script. Just YouTube's own iframe with muted autoplay,
+         looped over REEL_FROM..REEL_TO, to see whether Safari autoplays it on its own. The pen logo code is
+         still below (reelWithLogo) and is restored by calling it from the render step instead of reel(). -->
+    <div class="vhero-player"><iframe id="reel" class="vhero-yt on" title="Chaar Bhai wedding film reel" tabindex="-1" aria-hidden="true"
+      allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"
+      src="https://www.youtube.com/embed/${REEL}?autoplay=1&mute=1&playsinline=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0&modestbranding=1&loop=1&playlist=${REEL}&start=${REEL_FROM}&end=${REEL_TO}"></iframe></div>
   </div>
   <div class="vhero-in">
     <h1>
@@ -1556,7 +1558,6 @@ function loadYT(){
   });
   return ytReady;
 }
-if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
 function firstHeroVisit(){
@@ -1654,7 +1655,8 @@ function homeLogo(placeholder,firstVisit,reveal){
     }
   };
 }
-function reel(){
+/* The hero with the pen logo and the player script. Not used while the plain iframe above is being tried. */
+function reelWithLogo(){
   if(heroLogo){heroLogo.dispose();heroLogo=null;}
   const el=document.getElementById('reel');if(!el)return;
   const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
@@ -1707,6 +1709,8 @@ function reel(){
     });
   });
 }
+
+function reel(){if(heroLogo){heroLogo.dispose();heroLogo=null}}   // plain iframe: nothing to start
 
 /* Studio Ninja's form, loaded once per visit. snLoad() runs as soon as the
    site has settled (or straight away when the visit starts on Contact), so

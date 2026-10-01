@@ -1557,6 +1557,12 @@ function loadYT(){
   return ytReady;
 }
 if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
+/* End of the pen's time alone on the dark screen: the site (header, hero copy) fades in around it. */
+function penRelease(){
+  const h=document.documentElement;if(!h.classList.contains('cb-pen-hold'))return;
+  h.classList.remove('cb-pen-hold');document.body.classList.remove('locked');
+  setTimeout(()=>h.classList.remove('cb-pen-boot'),1200);
+}
 /* The pen describes the wait; the completed mark then becomes the header logo. */
 let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
 function firstHeroVisit(){
@@ -1570,6 +1576,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   const header=document.getElementById('hdr'),small=header.querySelector('.brand img');
   let disposed=false,played=false,settling=false,frame=0,flight=null,morph=null,pen=null;
   let started=0,progress=0;
+  const MIN_HOLD=2200;   // the pen always draws alone on the dark screen for at least this long, even when everything is cached
   const MAX_WAIT=7000;   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);sizing.observe(copy);heroSizing=sizing;
@@ -1628,7 +1635,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
+    if(!firstVisit||reduceMotion()){penRelease();if(played)settle();else setTimeout(()=>{if(!disposed)settle()},MAX_WAIT);return;}
     // Mount paused: no fixed-speed autoplay and no fully written fallback under the pen.
     pen=CBPenLoader.mount(placeholder,{manual:true,label:'Chaar Bhai. Film loading.'});heroPen=pen;
     placeholder.querySelector(':scope>img').hidden=true;
@@ -1640,7 +1647,8 @@ function homeLogo(placeholder,firstVisit,reveal){
     const draw=now=>{
       if(disposed||settling)return;
       const t=now-started;
-      if(played){settle();return;}
+      if(t>=MIN_HOLD)penRelease();           // from here the site comes up around the pen
+      if(played&&t>=MIN_HOLD){settle();return;}
       if(t>=MAX_WAIT){settle();return;}
       progress=Math.min(.94,1-Math.exp(-t/3000));
       pen.seek(progress*pen.drawEnd);
@@ -1653,7 +1661,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     playing(){
       if(disposed||played)return;
       played=true;
-      ready.then(()=>{if(!disposed)settle()});
+      if(!(firstVisit&&!reduceMotion()))ready.then(()=>{if(!disposed)settle()});   // with the pen drawing, its own loop lands it once the hold is over
     }
   };
 }
@@ -1985,10 +1993,9 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
   if(document.documentElement.classList.contains('cb-pen-boot')){   // experiment: first visit on Home, no loading screen
     try{sessionStorage.setItem('cb-loaded','1')}catch(e){}
     pre.setAttribute('aria-busy','false');pre.classList.add('gone');
-    document.body.classList.remove('locked');
-    go();
-    preGoneResolve();                          // the pen starts drawing at once, while the page comes up around it
-    setTimeout(()=>document.documentElement.classList.remove('cb-pen-boot'),1500);
+    go();                                      // the page is built behind the pen, invisible until penRelease()
+    preGoneResolve();                          // the pen starts drawing at once, alone on the dark screen
+    setTimeout(penRelease,6000);               // fallback if the pen never starts
     return;
   }
 

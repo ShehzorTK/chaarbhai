@@ -1468,7 +1468,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   size();const sizing=new ResizeObserver(size);heroSizing=sizing;
   // Measured once behind the ready gate; the observer only runs once the intro is over, so the pen never moves while it draws.
   const unlock=()=>{penUnlock();if(!disposed&&placeholder.isConnected)sizing.observe(copy)};
-  if(firstVisit)small.classList.add('cb-brand-in-flight');
+  small.classList.add('cb-brand-in-flight');   // one logo at a time: the header mark waits until the big one lands
   if(firstVisit&&!reduceMotion())placeholder.querySelector(':scope>img').hidden=true;   // no flash of the finished logo before the pen starts
   const finishFlight=()=>{
     if(flight)flight.remove();flight=null;
@@ -1488,7 +1488,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     const to=small.getBoundingClientRect();
     if(reduceMotion()||from.width<1||from.height<1){placeholder.remove();dispose();return;}
     flight=document.createElement('div');flight.setAttribute('aria-hidden','true');flight.className='cb-logo-flight';
-    flight.innerHTML='<img src="img/pen-loader-1.png" alt="">';
+    flight.innerHTML=`<img src="img/pen-loader-1${isLight()?'-dark':''}.png" alt="">`;
     if(isLight())flight.classList.add('cb-flight-light');
     Object.assign(flight.style,{left:from.left+'px',top:from.top+'px',width:from.width+'px',height:from.height+'px'});
     document.body.appendChild(flight);

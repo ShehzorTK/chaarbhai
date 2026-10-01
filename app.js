@@ -193,10 +193,15 @@ P['/']=()=>`
   </div>
 </section>
 
-<section class="tally">
-  <div class="tally-cap">
-    <p class="tally-big"><span>336,600+</span></p>
-    <p class="tally-copy">photographs we’ve delivered since 2013, for more than 1,800 couples. That’s before the 1,800 films.</p>
+<section class="tally${reduceMotion()?'':' tally-live'}">
+  <div class="tally-pin">
+    ${(()=>{const t=mosaicTiles(innerWidth<=900?35:45),mid=Math.floor(t.length/2);
+      // the centre tile opens the scene at full screen, so it asks for the 1920 copy
+      return `<div class="mosaic">${t.map((f,i)=>`<div class="mo-t${i===mid?' mo-mid':''}">${pic(f,i===mid?'100vw':'12vw',{alt:i===mid?f.alt:'',eager:i===mid&&!reduceMotion()})}</div>`).join('')}</div>`})()}
+    <div class="tally-cap">
+      <p class="tally-big"><span>336,600+</span></p>
+      <p class="tally-copy">photographs we’ve delivered since 2013, for more than 1,800 couples. That’s before the 1,800 films.</p>
+    </div>
   </div>
 </section>
 
@@ -1712,7 +1717,7 @@ function render(path){
   observe();photoWindow();
   if(path==='/portfolio'){PS.mount(jumpAfter&&jumpAfter.replace(/^ch-/,''));VF.syncUL()}else PS.unmount();
   jumpAfter=null;
-  letterForm();pricing();reel();
+  letterForm();pricing();reel();tallyQueue();
   paintLogos();labelFills();
   if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
@@ -1880,6 +1885,55 @@ document.getElementById('skip').addEventListener('click',()=>{
   const h=main.querySelector('h1'); if(h){h.tabIndex=-1;h.focus()}});
 
 /* Home, light mode: the bar stays clear over the hero (like dark mode) and turns navy only once the hero is scrolled past */
+/* Home tally mosaic: n different frames dealt round-robin across the couples so no two neighbours come from the same wedding,
+   none repeating a photo Home already shows. The middle tile is PICKS.tally: it opens the scene at full screen. */
+function mosaicTiles(n){
+  const mid={...PICKS.tally};
+  const used=new Set([PICKS.hero,PICKS.stay,PICKS.back,mid,...Object.values(PICKS.covers)].map(f=>f.src));
+  const byCouple=new Map();
+  Object.keys(PORTFOLIO).forEach(id=>(PORTFOLIO[id]||[]).forEach(ev=>ev.frames.forEach(f=>{
+    if(used.has(f.src))return;
+    if(!byCouple.has(ev.couple))byCouple.set(ev.couple,[]);
+    byCouple.get(ev.couple).push(f);
+  })));
+  const queues=[...byCouple.values()].map(fr=>{
+    const step=Math.max(1,Math.floor(fr.length/Math.ceil(n/byCouple.size)));
+    return fr.filter((_,i)=>i%step===0);
+  });
+  const picks=[];
+  for(;picks.length<n-1&&queues.some(q=>q.length);)
+    queues.forEach(q=>{if(picks.length<n-1&&q.length)picks.push(q.shift())});
+  picks.splice(Math.floor(n/2),0,mid);
+  return picks;
+}
+/* The mosaic starts scaled so the centre tile fills the screen, scrubs out to the whole wall, then dims under the caption.
+   The section is tall and its content sticks (CSS); scroll position drives it directly, no library, no number counts up. */
+let tallyRaf=0;
+function tallyScene(){
+  tallyRaf=0;
+  const sec=document.querySelector('.tally-live');if(!sec)return;
+  const mosaic=sec.querySelector('.mosaic'),cap=sec.querySelector('.tally-cap'),mid=mosaic&&mosaic.querySelector('.mo-mid');if(!mid)return;
+  const vh=innerHeight,r=sec.getBoundingClientRect();
+  if(r.top<vh*3&&!sec.dataset.warm){sec.dataset.warm=1;mosaic.querySelectorAll('img[loading="lazy"]').forEach(i=>i.loading='eager')}   // the wall is clipped out of view until the zoom-out, so fetch it early
+  if(r.bottom<-vh||r.top>vh*2)return;                       // far away: nothing to move
+  const desk=innerWidth>900,cols=desk?9:5,rows=desk?5:7;
+  const idx=[...mosaic.children].indexOf(mid),col=idx%cols,row=Math.floor(idx/cols);
+  const tw=innerWidth/cols,th=vh/rows;
+  const from=Math.max(innerWidth/tw,vh/th,1)*1.02;
+  const p=Math.max(0,Math.min(1,-r.top/Math.max(1,r.height-vh)));
+  const seg=(a,b)=>Math.max(0,Math.min(1,(p-a)/(b-a)));
+  const e=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;               // power2.inOut
+  const z=e(seg(0,.62)),s=from+(1-from)*z;
+  mosaic.style.transformOrigin=`${(col+.5)/cols*100}% ${(row+.5)/rows*100}%`;
+  mosaic.style.transform=`scale(${s.toFixed(4)})`;
+  const dim=seg(.66,.96);
+  mosaic.style.setProperty('--mo-dim',(1-.8*dim).toFixed(3));
+  mosaic.style.setProperty('--mo-mid',(1-.65*dim).toFixed(3));
+  const c=seg(.7,1);cap.style.opacity=c.toFixed(3);cap.style.transform=`translateY(${(40*(1-c)).toFixed(1)}px)`;
+}
+const tallyQueue=()=>{if(!tallyRaf)tallyRaf=requestAnimationFrame(tallyScene)};
+addEventListener('scroll',tallyQueue,{passive:true});addEventListener('resize',tallyQueue,{passive:true});
+
 function heroNav(){
   const h=document.getElementById('hdr'),hero=document.querySelector('.vhero');
   h.classList.toggle('over-hero',!!hero&&hero.getBoundingClientRect().bottom>h.offsetHeight);

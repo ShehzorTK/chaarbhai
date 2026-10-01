@@ -1607,6 +1607,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     document.body.appendChild(flight);
     // One visible mark: the large drawing becomes the small header mark at landing.
     small.classList.add('cb-brand-in-flight');placeholder.remove();
+    reveal();   // the mark is on its way to the header: now the video comes in
     if(pen){pen.destroy();if(heroPen===pen)heroPen=null;pen=null;}
     morph=flight.animate([
       {transform:'translate(0,0) scale(1,1)'},
@@ -1625,7 +1626,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   });
   const settle=()=>{
     if(disposed||settling||!placeholder.isConnected)return;
-    settling=true;reveal();if(skipOff)skipOff();
+    settling=true;if(!pen)reveal();if(skipOff)skipOff();   // with the pen the video is revealed by fly(), once the mark is moving
     cancelAnimationFrame(frame);
     if(!firstVisit){
       placeholder.classList.add('is-leaving');
@@ -1634,6 +1635,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     }
     if(!pen){fly();return;}
     // Complete the remaining strokes on readiness, then preserve the mark while it travels.
+    if(progress>=1){pen.finish();fly();return;}   // already fully drawn: no extra completion pass before the flight
     const from=progress,t0=performance.now();
     const complete=now=>{
       if(disposed)return;
@@ -1681,6 +1683,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   });
   return {
     dispose,
+    holdsReveal:firstVisit&&!reduceMotion(),   // the mark itself decides when the video is revealed
     playing(){
       if(disposed||played)return;
       played=true;
@@ -1720,7 +1723,7 @@ function reel(){
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
           if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
-            shown=true;reveal();
+            shown=true;if(!logo.holdsReveal)reveal();
             logo.playing();
           }
           if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}

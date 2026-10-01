@@ -74,7 +74,7 @@ function html(){
   const data=flat();if(data.length<2)return '';
   const cats=[];data.forEach((d,i)=>{const k=catIndex(d.c);if(!cats.some(x=>x[0]===k))cats.push([k,i])});
   return prologueHTML()+`<div class="ps wk-in" id="ps" data-n="${data.length}">
-  <div class="ps-glowwrap" aria-hidden="true"><i class="ps-glow"></i></div>
+  <div class="ps-glowwrap" aria-hidden="true"><i class="ps-ground"></i><i class="ps-glow"></i></div>
   <div class="ps-bar">${VF.catLineHTML(cats,'Jump to a category of photographs')}</div>
   <div class="ps-feed" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
     ?`<article class="ps-slide ps-open" data-i="${i}" aria-label="${esc(d.c.name)}">${openerHTML(d)}</article>`
@@ -150,12 +150,12 @@ function cool(i){
 }
 function activate(i){
   if(!S||i<0||i>=S.data.length||i===S.active)return;
-  S.active=i;
-  S.slides.forEach((el,k)=>{
-    el.inert=k!==i;
-    el.classList.toggle('is-active',k===i);
-    if(Math.abs(k-i)<=1)warm(k);else cool(k);
-  });
+  const pv=S.active;S.active=i;
+  if(pv>=0){S.slides[pv].inert=true;S.slides[pv].classList.remove('is-active')}
+  S.slides[i].inert=false;S.slides[i].classList.add('is-active');
+  /* only the old and new neighbourhoods can hold live strips: warm the new three, cool the rest of the old three */
+  const lo=Math.min(i,pv<0?i:pv)-1,hi=Math.max(i,pv<0?i:pv)+1;
+  for(let k=Math.max(0,lo);k<=Math.min(S.slides.length-1,hi);k++){if(Math.abs(k-i)<=1)warm(k);else cool(k)}
   const d=S.data[i];
   S.tintNow=tintOf(d);applyTint();glowStory(i);
   VF.markCat(S.root,catIndex(d.c),S.reduce);
@@ -172,7 +172,7 @@ function go(id,smooth){
   if(!S)return;
   let i=0;
   if(id){const k=S.data.findIndex(d=>d.c.id===id);if(k>=0)i=k}
-  if(id||smooth)scrollTo({top:slideTop(i),behavior:smooth&&!S.reduce?'smooth':'instant'});   // no chapter asked for: stay on the prologue
+  if(id||smooth)scrollTo({top:slideTop(i),behavior:'instant'});   // no chapter asked for: stay on the prologue
   if(!smooth)activate(i);
 }
 
@@ -187,67 +187,19 @@ function measure(){
   S.tucked=r.top<=vh*.5;
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
-  /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
-  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
-  S.root.classList.toggle('glow-off',r.bottom<0||r.top>vh);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
-/* From the menu, one scroll or one press of Down/Space/PageDown carries the page to the stage (the first chapter opener
-   flush under the header, the first couple peeking in); after that the mandatory snap does one slide per scroll.
+/* Scrolling is the browser's own: the page snaps (CSS, always on while on Work) to the prologue, every slide and the footer.
    Left and Right step the photographs of the couple on screen. */
 const shown=()=>S&&S.root.offsetParent!==null;
-function flyTo(t){
-  S.lock=1;S.lastD=0;
-  if(S.reduce){scrollTo({top:t,behavior:'instant'});S.lock=0;return true}
-  /* our own eased glide with the snap switched off while it runs (the browser's smooth scroll fights the snap points: a fast jump, then a slow drift) */
-  const y0=scrollY,dist=t-y0,dur=Math.min(900,420+Math.abs(dist)*.35),t0=performance.now(),ease=x=>1-Math.pow(1-x,4);
-  const el=document.documentElement;el.classList.add('ps-fly');
-  const stop=()=>{el.classList.remove('ps-fly');if(S){S.lock=2;S.landing=0;S.landed=performance.now();S.lastW=S.landed;settle()}};   // 2 = landed, still swallowing the tail of the gesture
-  (function f(now){
-    if(!S){el.classList.remove('ps-fly');return}
-    const k=Math.min(1,(now-t0)/dur);scrollTo(0,y0+dist*ease(k));
-    if(k<1)requestAnimationFrame(f);else{scrollTo(0,t);stop()}
-  })(t0);
-  return true;
-}
-/* down from the menu: to the stage. up from the first opener or the menu: all the way to the top, however small the scroll */
-function toStage(){
-  if(!shown())return false;
-  const t=slideTop(0);
-  return scrollY<t-4?flyTo(t):false;
-}
-function toTop(){
-  if(!shown()||scrollY<4||S.slides.length<2)return false;
-  return scrollY<=slideTop(1)-8?flyTo(0):false;
-}
-/* a wheel or trackpad gesture keeps sending (fading) events for a second after the finger lifts; those must not scroll the
-   page natively once we have landed (the snap would jerk it on). A new push is told apart from the fading tail: it is stronger
-   than the last event, so it goes straight through. The hold also ends after 350ms or 90ms of quiet. */
-function settle(){clearTimeout(S.lockT);S.lockT=setTimeout(()=>{if(!S||S.lock===1)return;if(performance.now()-S.lastW<90&&performance.now()-S.landed<350)settle();else S.lock=0},60)}
-function onWheel(e){
-  if(!shown()||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-  const d=Math.abs(e.deltaY);
-  if(S.lock===1){S.lastD=d;e.preventDefault();return}
-  if(S.lock===2){
-    if(d>(S.lastD||0)*1.4+6){S.lock=0}                      // a fresh push, not the tail
-    else{S.lastW=performance.now();S.lastD=d;e.preventDefault();return}
-  }
-  S.lastD=d;
-  if((e.deltaY>0?toStage():toTop()))e.preventDefault();
-}
 function onKey(e){
-  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey)return;
-  const t=e.target;
-  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
-  if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
   const k=e.key;
-  if(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]')))){
-    if(S.lock===1||toStage())e.preventDefault();
-  }else if((k==='ArrowRight'||k==='ArrowLeft')&&S.inStage&&S.active>=0){
-    if(t&&t.closest&&t.closest('.seq-strip'))return;   // a focused strip scrolls itself
-    const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
-    if(b&&!b.disabled){e.preventDefault();b.click()}
-  }
+  if((k!=='ArrowRight'&&k!=='ArrowLeft')||!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!S.inStage||S.active<0)return;
+  const t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||(t.closest&&t.closest('.seq-strip'))))return;   // a focused strip scrolls itself
+  if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
+  const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
+  if(b&&!b.disabled){e.preventDefault();b.click()}
 }
 function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
@@ -282,7 +234,6 @@ function mount(then){
   }
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
-  addEventListener('wheel',onWheel,{passive:false});
   document.addEventListener('keydown',onKey);
   observe();
   root.addEventListener('click',e=>{
@@ -301,9 +252,8 @@ function unmount(){
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
   ['--tint','--glow'].forEach(k=>S.host.style.removeProperty(k));
   cancelAnimationFrame(S.raf);
-  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('wheel',onWheel);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
+  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
   if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
-  document.documentElement.classList.remove('snap-y');
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');
 }

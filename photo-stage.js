@@ -90,7 +90,7 @@ function html(){
 /* only a couple's slide has a colour (its own, else its chapter's): the prologue and the chapter openers stay the site's navy */
 const tintOf=d=>d.open?null:((d.q&&d.q.t)||d.c.tint||null);
 function setTint(t){
-  if(!S)return;
+  if(!S||S.notint)return;
   const st=S.host.style;
   if(t){st.setProperty('--tint',t.g);st.setProperty('--glow',t.l)}else{st.removeProperty('--tint');st.removeProperty('--glow')}
 }
@@ -114,7 +114,7 @@ function glowRest(){
   S.gx=S.tx=innerWidth*.5;S.gy=S.ty=S.fine?innerHeight*.45:innerHeight*.82;
   glowPlace();
 }
-function glowPlace(){S.glow.style.transform='translate3d('+(S.gx-S.gw/2).toFixed(1)+'px,'+(S.gy-S.gw/2).toFixed(1)+'px,0)'}
+function glowPlace(){if(!S.glow)return;S.glow.style.transform='translate3d('+(S.gx-S.gw/2).toFixed(1)+'px,'+(S.gy-S.gw/2).toFixed(1)+'px,0)'}
 function glowTick(t){
   if(!S||!S.chase)return;
   const dt=Math.min(64,t-(S.gt||t));S.gt=t;
@@ -130,7 +130,7 @@ function glowMove(e){
   if(!S.chase&&!document.hidden){S.chase=1;S.gt=0;S.raf=requestAnimationFrame(glowTick)}
 }
 function glowStory(i){
-  if(S.fine||S.reduce)return;
+  if(!S.glow||S.fine||S.reduce)return;
   const p=S.data.length>1?i/(S.data.length-1):0;
   S.gx=innerWidth*(.2+.6*p);glowPlace();
 }
@@ -263,16 +263,19 @@ function observe(){
 }
 function onResize(){if(!S)return;glowRest();observe();onScroll()}
 
+/* ?noglow and ?notint switch the glow layer and the ground tint off, to find which one a browser chokes on (read once, at mount) */
+const Q={has:k=>new URLSearchParams(location.search).has(k)};
 function mount(then){
   unmount();
   const root=document.getElementById('ps');if(!root)return;
   const data=flat();
   S={root,data,bar:$('.ps-bar',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
      reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,active:-1,cand:-1,deb:0,
-     host:document.documentElement,glow:$('.ps-glow',root),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
+     host:document.documentElement,glow:Q.has('noglow')?null:$('.ps-glow',root),notint:Q.has('notint'),fine:matchMedia('(hover:hover) and (pointer:fine)').matches};
   S.slides.forEach(el=>{el.inert=true});
   glowRest();
-  if(S.fine&&!S.reduce){
+  if(S.glow)root.classList.remove('no-glow');else root.classList.add('no-glow');
+  if(S.glow&&S.fine&&!S.reduce){
     S.onVis=()=>{if(document.hidden){cancelAnimationFrame(S.raf);S.chase=0;S.gt=0}else if(S.gx!==S.tx||S.gy!==S.ty){S.chase=1;S.raf=requestAnimationFrame(glowTick)}};
     addEventListener('pointermove',glowMove,{passive:true});
     document.addEventListener('visibilitychange',S.onVis);

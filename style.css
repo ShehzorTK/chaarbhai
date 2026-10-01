@@ -834,6 +834,8 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
   --fh:max(150px,calc(var(--ps-sh) - var(--ps-chrome)));
   position:relative;isolation:isolate;color:var(--paper);
   background:var(--tint,var(--ink));transition:background-color .8s var(--quint)}
+/* ?noglow: no glow layer at all */
+.ps.no-glow .ps-glowwrap{display:none}
 html.ps-fly,html.ps-fly.snap-y,html.ps-fly.on-work{scroll-snap-type:none}
 html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
 /* the category line sticks under the header; it has the ground's colour because slides scroll beneath it */

@@ -1563,7 +1563,7 @@ function firstHeroVisit(){
   let seen=heroVisited;
   try{seen=seen||sessionStorage.getItem('cb-hero-seen')==='1';sessionStorage.setItem('cb-hero-seen','1')}catch(e){}
   heroVisited=true;
-  return !seen;
+  return !seen||document.documentElement.classList.contains('cb-pen-boot');   // a fresh load of Home always draws the pen
 }
 function homeLogo(placeholder,firstVisit,reveal){
   const hero=placeholder.closest('.vhero'),copy=hero.querySelector('.vhero-in');

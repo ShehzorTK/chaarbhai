@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chaar Bhai · Wedding Photography and Film</title>
 <meta name="description" content="Wedding photo and film since 2013. Based in the Greater Toronto Area, and we travel.">
+<meta name="cb-version" content="40.3">
 <meta name="theme-color" content="#12141C" id="themecolor">
 <!-- Google Analytics (GA4, G-X1GHG229CQ). Loads only on the real site:
      chaarbhai.com and the main Netlify address, never on localhost, a file
@@ -51,14 +52,14 @@
 /* The preloader is a first-visit moment. Once it has played in this tab,
    reloads skip it. Decided here, before the body paints, so it never flashes. */
 try{if(sessionStorage.getItem('cb-loaded')==='1')document.documentElement.classList.add('seen')}catch(e){}
-/* Experiment (v40.2): on a first visit that starts on Home there is no loading screen. The pen logo draws at once
+/* Experiment (v40.2, every Home load from v40.3): when a load starts on Home there is no logo-fill loading screen. The pen logo draws at once
    and the site comes up around it. cb-pen-boot hides the loading screen and holds the dark background until then. */
-if(!document.documentElement.classList.contains('seen')&&(location.hash===''||location.hash==='#/'))document.documentElement.classList.add('cb-pen-boot');
+if(location.hash===''||location.hash==='#/')document.documentElement.classList.add('cb-pen-boot');   // every load of Home, not only the first in a tab
 /* Light or dark, as the visitor last chose it. Set before paint so the page
    never flashes the other theme. Dark is the house default. */
 try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}
 </script>
-<link rel="stylesheet" href="style.css?v=40.2">
+<link rel="stylesheet" href="style.css?v=40.3">
 </head>
 <body class="locked">
 <button class="skip" type="button" id="skip">Skip to content</button>
@@ -128,11 +129,11 @@ try{if(localStorage.getItem('cb-theme')==='light')document.documentElement.datas
 </footer>
 
 <script>if(/[?&]debug\b/.test(location.search))document.write('<script src="debug.js"><\/script>')</script>
-<script src="portfolio.js?v=40.2"></script>
-<script src="videos.js?v=40.2"></script>
-<script src="video-feed.js?v=40.2"></script>
-<script src="reviews.js?v=40.2"></script>
-<script src="pen-loader.js?v=40.2"></script>
-<script src="app.js?v=40.2"></script>
+<script src="portfolio.js?v=40.3"></script>
+<script src="videos.js?v=40.3"></script>
+<script src="video-feed.js?v=40.3"></script>
+<script src="reviews.js?v=40.3"></script>
+<script src="pen-loader.js?v=40.3"></script>
+<script src="app.js?v=40.3"></script>
 </body>
 </html>

@@ -200,7 +200,8 @@ P['/']=()=>`
       return `<div class="mosaic">${t.map((f,i)=>`<div class="mo-t${i===mid?' mo-mid':''}">${pic(f,i===mid?'100vw':'12vw',{alt:i===mid?f.alt:'',eager:i===mid&&!reduceMotion()})}</div>`).join('')}</div>`})()}
     <div class="tally-cap">
       <p class="tally-big"><span>336,600+</span></p>
-      <p class="tally-copy">photographs we’ve delivered since 2013, for more than 1,800 couples. That’s before the 1,800 films.</p>
+      <p class="tally-copy">photographs we’ve delivered since 2013, for more than 1,800 couples.</p>
+      <p class="tally-more">That’s before the 1,800 films.</p>
     </div>
   </div>
 </section>
@@ -1929,7 +1930,7 @@ function tallyScene(){
   const dim=seg(.66,.96);
   mosaic.style.setProperty('--mo-dim',(1-.8*dim).toFixed(3));
   mosaic.style.setProperty('--mo-mid',(1-.65*dim).toFixed(3));
-  const c=seg(.7,1);cap.style.opacity=c.toFixed(3);cap.style.transform=`translateY(${(40*(1-c)).toFixed(1)}px)`;
+  const c=seg(.7,1);cap.style.opacity=c.toFixed(3);sec.style.setProperty('--cap-o',c.toFixed(3));cap.style.transform=`translateY(${(40*(1-c)).toFixed(1)}px)`;
 }
 const tallyQueue=()=>{if(!tallyRaf)tallyRaf=requestAnimationFrame(tallyScene)};
 addEventListener('scroll',tallyQueue,{passive:true});addEventListener('resize',tallyQueue,{passive:true});

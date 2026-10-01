@@ -627,8 +627,15 @@ function onKey(e){
   if(!S||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey)return;
   const t=e.target;
   if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
-  if(document.body.classList.contains('locked')||S.away)return;   // the mobile menu is open, or the feed isn't on screen
+  if(document.body.classList.contains('locked'))return;   // the mobile menu is open
   const k=e.key;
+  /* on the menu above the feed, Down / PageDown / Space carry the page to the first film in one go */
+  if(S.away&&!document.hidden&&(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]'))))){
+    const h=document.getElementById('hdr'),top=S.root.getBoundingClientRect().top-(h?h.offsetHeight:0);
+    if(top>4){e.preventDefault();if(!S.keyLock){S.keyLock=1;setTimeout(()=>{if(S)S.keyLock=0},800);alignFeed(true)}}
+    return;
+  }
+  if(S.away)return;                                      // the feed isn't on screen
   if(k==='ArrowDown'||k==='j'||k==='PageDown'){e.preventDefault();step(1)}
   else if(k==='ArrowUp'||k==='k'||k==='PageUp'){e.preventDefault();step(-1)}
   else if(k===' '||k==='Spacebar'){

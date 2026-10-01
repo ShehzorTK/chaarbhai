@@ -192,6 +192,37 @@ function measure(){
   S.root.classList.toggle('glow-off',r.bottom<0||r.top>vh);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
+/* From the menu, one scroll or one press of Down/Space/PageDown carries the page to the stage (the first chapter opener
+   flush under the header, the first couple peeking in); after that the mandatory snap does one slide per scroll.
+   Left and Right step the photographs of the couple on screen. */
+const shown=()=>S&&S.root.offsetParent!==null;
+function toStage(){
+  if(!shown())return false;
+  const t=slideTop(0);
+  if(scrollY>=t-4)return false;
+  S.lock=1;clearTimeout(S.lockT);S.lockT=setTimeout(()=>{if(S)S.lock=0},S.reduce?200:800);
+  scrollTo({top:t,behavior:S.reduce?'instant':'smooth'});
+  return true;
+}
+function onWheel(e){
+  if(!shown()||e.ctrlKey||e.deltaY<=0)return;
+  if(S.lock){e.preventDefault();return}
+  if(Math.abs(e.deltaY)>=Math.abs(e.deltaX)&&toStage())e.preventDefault();
+}
+function onKey(e){
+  if(!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey)return;
+  const t=e.target;
+  if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
+  if(document.documentElement.classList.contains('lb-open')||document.body.classList.contains('locked')||document.body.classList.contains('vf-on'))return;
+  const k=e.key;
+  if(k==='ArrowDown'||k==='PageDown'||(k===' '&&!(t.closest&&t.closest('button,a,[role="button"]')))){
+    if(S.lock||toStage())e.preventDefault();
+  }else if((k==='ArrowRight'||k==='ArrowLeft')&&S.inStage&&S.active>=0){
+    if(t&&t.closest&&t.closest('.seq-strip'))return;   // a focused strip scrolls itself
+    const b=S.slides[S.active].querySelector(k==='ArrowRight'?'.sq-next':'.sq-prev');
+    if(b&&!b.disabled){e.preventDefault();b.click()}
+  }
+}
 function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
 function observe(){
@@ -222,6 +253,8 @@ function mount(then){
   }
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
+  addEventListener('wheel',onWheel,{passive:false});
+  document.addEventListener('keydown',onKey);
   observe();
   root.addEventListener('click',e=>{
     const b=e.target.closest('.cl-b');if(!b)return;
@@ -239,7 +272,7 @@ function unmount(){
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
   ['--tint','--glow'].forEach(k=>S.host.style.removeProperty(k));
   cancelAnimationFrame(S.raf);
-  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('pointermove',glowMove);
+  removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);removeEventListener('wheel',onWheel);document.removeEventListener('keydown',onKey);removeEventListener('pointermove',glowMove);
   if(S.onVis)document.removeEventListener('visibilitychange',S.onVis);
   document.documentElement.classList.remove('snap-y');
   S=null;

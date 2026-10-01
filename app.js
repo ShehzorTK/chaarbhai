@@ -1558,7 +1558,7 @@ function loadYT(){
   return ytReady;
 }
 /* The pen describes the wait; the completed mark then becomes the header logo. */
-let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false,heroReelCleanup=null;
+let heroPen=null,heroSizing=null,heroLogo=null,heroVisited=false;
 function firstHeroVisit(){
   let seen=heroVisited;
   try{seen=seen||sessionStorage.getItem('cb-hero-seen')==='1';sessionStorage.setItem('cb-hero-seen','1')}catch(e){}
@@ -1658,88 +1658,51 @@ function homeLogo(placeholder,firstVisit){
   };
 }
 function reel(){
-  if(heroReelCleanup){heroReelCleanup();heroReelCleanup=null;}
   if(heroLogo){heroLogo.dispose();heroLogo=null;}
   const el=document.getElementById('reel');if(!el)return;
-  const playerShell=el.closest('.vhero-player'),hero=playerShell.closest('.vhero');
-  const placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
+  const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
   heroLogo=homeLogo(placeholder,firstHeroVisit());const logo=heroLogo;
-  if(reduceMotion()||location.protocol==='file:')return;
-  let disposed=false,player=null,ready=false,pageReady=false,shown=false,blocked=false;
-  let poll=0,revealTimer=0,lastPlay=0,deadline=0;
-  const visible=()=>{
-    const r=hero.getBoundingClientRect();
-    return document.visibilityState==='visible'&&r.bottom>0&&r.top<innerHeight;
-  };
-  // mute() crosses the iframe asynchronously. Wait for its acknowledgement
-  // before requesting play, rather than racing an audible autoplay request.
-  const attempt=()=>{
-    if(disposed||!ready||!pageReady||!frame.isConnected||!visible()||blocked)return;
-    if(!player.isMuted()){player.setVolume(0);player.mute();return;}
-    const state=player.getPlayerState(),now=performance.now();
-    if(state!==YT.PlayerState.PLAYING&&state!==YT.PlayerState.BUFFERING&&now-lastPlay>=1000){
-      lastPlay=now;player.playVideo();
-    }
-  };
-  const wake=()=>{if(disposed)return;blocked=false;deadline=performance.now()+30000;attempt()};
-  const inView=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))wake()});
-  inView.observe(hero);
-  addEventListener('focus',wake);addEventListener('pageshow',wake);
-  addEventListener('pointerdown',wake,{passive:true});
-  document.addEventListener('visibilitychange',wake);
-  // Set autoplay delegation and inline/muted parameters before navigation.
-  // The iframe starts cued; the parent starts it only after mute is confirmed.
-  const frame=document.createElement('iframe');frame.id='reel';frame.className='vhero-yt';
-  frame.width='640';frame.height='360';frame.tabIndex=-1;
-  frame.title='Chaar Bhai wedding film reel';frame.setAttribute('aria-hidden','true');
-  frame.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');
-  frame.referrerPolicy='strict-origin-when-cross-origin';
-  const params=new URLSearchParams({enablejsapi:1,autoplay:0,mute:1,controls:0,playsinline:1,
-    rel:0,iv_load_policy:3,disablekb:1,fs:0,origin:location.origin,start:REEL_FROM,end:REEL_TO});
-  frame.src='https://www.youtube-nocookie.com/embed/'+REEL+'?'+params;
-  el.replaceWith(frame);
-  heroReelCleanup=()=>{
-    disposed=true;clearInterval(poll);clearTimeout(revealTimer);inView.disconnect();
-    removeEventListener('focus',wake);removeEventListener('pageshow',wake);
-    removeEventListener('pointerdown',wake);document.removeEventListener('visibilitychange',wake);
-    if(player)player.destroy();
-  };
-  preGone.then(()=>{if(!disposed){pageReady=true;wake()}});
+  let shown=false;
+  if(reduceMotion())return;
+  // YouTube won't play embeds on a page opened straight from disk (file://):
+  // it needs a real web address to check where it's embedded. The poster
+  // logo stands in; the reel plays once the site is served (Netlify, or a
+  // local server) rather than double-clicked.
+  if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
   loadYT().then(()=>{
-    if(disposed||!frame.isConnected)return;
-    player=new YT.Player(frame,{
+    if(!document.body.contains(el))return;          // left the home page meanwhile
+    const p=new YT.Player(el,{
+      videoId:REEL,host:'https://www.youtube-nocookie.com',
+      playerVars:{autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
-        onReady:e=>{
-          if(disposed)return;
-          player=e.target;ready=true;player.setVolume(0);player.mute();wake();
-          poll=setInterval(()=>{
-            if(disposed||!frame.isConnected)return;
-            if(performance.now()<deadline)attempt();
-            if(!visible()||player.getPlayerState()!==YT.PlayerState.PLAYING)return;
-            const time=player.getCurrentTime();
-            if(time>=REEL_TO-.25||(time>0&&time<REEL_FROM-.5))player.seekTo(REEL_FROM,true);
-          },200);
-        },
+        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
+          f.title='Chaar Bhai wedding film reel';e.target.mute();e.target.playVideo();
+          // browsers can hold back the first play (a tab still in the background,
+          // a slow start), so nudge it a few times, and again when the tab comes
+          // into view or the visitor first scrolls or taps
+          const nudge=()=>{if(!shown&&document.body.contains(f)&&document.visibilityState==='visible'){e.target.mute();e.target.playVideo()}};
+          let tries=0;const t=setInterval(()=>{if(shown||++tries>6||!document.body.contains(f))return clearInterval(t);nudge()},1500);
+          const once=()=>{nudge();if(shown){removeEventListener('scroll',once);removeEventListener('pointerdown',once);document.removeEventListener('visibilitychange',once)}};
+          addEventListener('scroll',once,{passive:true});addEventListener('pointerdown',once);document.addEventListener('visibilitychange',once);
+          // browsers pause video in a background tab; pick it back up on return
+          const resume=()=>{if(!document.body.contains(f))return document.removeEventListener('visibilitychange',resume);
+            if(document.visibilityState==='visible'&&e.target.getPlayerState()!==YT.PlayerState.PLAYING){e.target.mute();e.target.playVideo()}};
+          document.addEventListener('visibilitychange',resume);
+          // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
+          const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
+            const t=e.target.getCurrentTime&&e.target.getCurrentTime();
+            if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
-          if(disposed)return;
-          clearTimeout(revealTimer);
-          if(e.data===YT.PlayerState.PLAYING){
-            blocked=false;playerShell.dataset.playback='playing';
-            // A brief PLAYING state can be followed immediately by a Safari pause.
-            // Confirm continued playback before moving the logo and lifting its cover.
-            if(!shown)revealTimer=setTimeout(()=>{
-              if(disposed||!frame.isConnected||player.getPlayerState()!==YT.PlayerState.PLAYING)return;
-              shown=true;frame.classList.add('on');playerShell.classList.add('is-playing');
-              const cover=playerShell.parentNode.querySelector('.cb-video-cover');
-              if(cover){cover.classList.add('is-leaving');afterTransition(cover,400).then(()=>cover.remove())}
-              logo.playing();
-            },200);
-          }else if(e.data===YT.PlayerState.PAUSED||e.data===YT.PlayerState.CUED){
-            playerShell.dataset.playback='waiting';deadline=performance.now()+30000;
-          }else if(e.data===YT.PlayerState.ENDED){player.seekTo(REEL_FROM,true);lastPlay=0;wake()}
+          if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
+            shown=true;const f=e.target.getIframe();if(f)f.classList.add('on');
+            playerShell.classList.add('is-playing');
+            const cover=playerShell.parentNode.querySelector('.cb-video-cover');
+            if(cover){cover.classList.add('is-leaving');afterTransition(cover,400).then(()=>cover.remove())}
+            logo.playing();
+          }
+          if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}
         },
-        onAutoplayBlocked:()=>{blocked=true;playerShell.dataset.playback='blocked'},
-        onError:e=>{blocked=true;playerShell.dataset.playback='error-'+e.data}
+        onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the logo, never YouTube's error screen
       }
     });
   });

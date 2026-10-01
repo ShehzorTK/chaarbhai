@@ -979,7 +979,8 @@ header{flex-wrap:wrap}
 .wk-in{animation:wkIn .2s linear both}   /* Photographs and Films fade in over each other: opacity only */
 
 .vf{--vfb:56px;--vf-cap:128px;--vf-h0:calc(100svh - var(--hh,84px));--vf-h:calc(var(--vf-h0) - var(--vfb));
-  position:relative;height:var(--vf-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line)}
+  position:relative;height:var(--vf-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line);
+  scroll-snap-align:start;scroll-margin-top:var(--hh,84px)}
 .vf-bar{position:absolute;top:0;left:0;right:0;height:var(--vfb);display:flex;align-items:center;gap:14px;
   padding:0;border-bottom:1px solid var(--line);background:var(--ink);z-index:2}
 .vf-bar .cl{flex:1;min-width:0}

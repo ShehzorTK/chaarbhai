@@ -179,11 +179,26 @@ function slideHTML(d,i){
 </section>`;
 }
 
+/* the Films menu: the same kind of opening as Photographs (a headline, a few sentences, the contents), above the feed */
+function prologueHTML(data,catsOn){
+  const ch=typeof CHAPTERS!=='undefined'?CHAPTERS:[],cats=window.WORK_CATS||[];
+  return `<section class="pro" id="vf-pro" aria-labelledby="vf-pro-h"><div class="pro-in">
+    <h1 class="pro-h" id="vf-pro-h">Stay a while. Here are the films.</h1>
+    <p class="pro-p">Every film here is a real wedding, shown the way the day unfolded. Start with a highlight, then watch the full film if you want the whole day. Scroll for the next film.</p>
+    <ol class="pro-list">${catsOn.map(([k,first])=>{
+      const c=ch.find(x=>x.short===cats[k]),n=data.filter(d=>d.cat===k).length;
+      return `<li><button class="pro-row" type="button" data-first="${first}">
+        <span class="pro-n">${esc(c?c.name:cats[k])}</span>
+        <span class="pro-a">${esc(c?c.alt.split(' · ').slice(0,3).join(' · '):'')}</span>
+        <span class="pro-c">${n} ${n===1?'film':'films'}</span></button></li>`}).join('')}
+    </ol></div></section>`;
+}
+
 /* ---------- open / close ---------- */
 function open(id){
   const host=document.getElementById('wk-videos');
   if(!window.VIDEOS||!host)return;
-  if(S){ if(id){const f=indexOfId(S.data,id);if(f)jump(f.i,f.mode)} else alignFeed(true); return; }
+  if(S){ if(id){const f=indexOfId(S.data,id);if(f)jump(f.i,f.mode)} else scrollTo({top:0,behavior:'instant'}); return; }
   const data=flatten(); if(!data.length)return;
   const found=id?indexOfId(data,id):null;
   if(found)data[found.i].mode=found.mode;
@@ -195,7 +210,7 @@ function open(id){
   root.innerHTML=`<div class="vf-bar">${catLineHTML(catsOn,'Jump to a category of films')}</div>
     <div class="vf-feed">${data.map(slideHTML).join('')}</div>
     <p class="vf-sr" role="status" aria-live="polite"></p>`;
-  root.classList.add('wk-in');host.textContent='';host.appendChild(root);host.hidden=false;markToggle('videos');warm();
+  root.classList.add('wk-in');host.textContent='';host.insertAdjacentHTML('beforeend',prologueHTML(data,catsOn));host.appendChild(root);host.hidden=false;markToggle('videos');warm();
   const ph=document.getElementById('wk-photos');if(ph)ph.hidden=true;
   document.body.classList.add('vf-on');
 
@@ -208,6 +223,8 @@ function open(id){
   S.feed.addEventListener('wheel',drop,{passive:true});
   S.feed.addEventListener('touchstart',drop,{passive:true});
   root.addEventListener('click',onClick);
+  S.pro=document.getElementById('vf-pro');
+  if(S.pro)S.pro.addEventListener('click',e=>{const b=e.target.closest('.pro-row');if(!b)return;jump(+b.dataset.first);alignFeed(true)});
   root.addEventListener('load',onImg,true);
   root.addEventListener('error',onImg,true);
   root.addEventListener('keydown',onSeekKey);
@@ -225,21 +242,23 @@ function open(id){
     S.inView=e.intersectionRatio>=0.5;
     document.body.classList.toggle('vf-in',S.inView);
     if(S.inView){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
-    if(S.inView&&!S.aligned){S.aligned=true;setTimeout(realign,400)}   // after the slide down, check nothing moved under it   // the header (and its Photos | Films switch) stays while the feed is on screen
     syncAway();
   },{threshold:[0,0.5]});
   S.vio.observe(root);
+  S.onScroll=()=>{if(S&&!S.st){S.st=1;requestAnimationFrame(()=>{if(!S)return;S.st=0;const h=document.getElementById('hdr');S.aligned=Math.abs(S.root.getBoundingClientRect().top-(h?h.offsetHeight:0))<=3})}};
+  addEventListener('scroll',S.onScroll,{passive:true});
   S.poll=setInterval(tick,250);
   dbg('vf open, '+data.length+' slides, phone='+PHONE);
 
   if(startAt>0)S.feed.scrollTo({top:S.slides[startAt].offsetTop,behavior:'instant'});
   activate(startAt);
-  alignFeed(!found);      // a link to one video lands on it at once; the Films button slides down to the feed
+  if(found)alignFeed(false);                       // a link to one video lands on it at once
+  else scrollTo({top:0,behavior:'instant'});       // the Films tab lands on the menu, like Photographs
 }
 
 /* Something above the feed changed size after it was lined up (the web fonts arriving and rewrapping the heading,
    the header changing height, the phone turning): line it up again, if the feed is the thing on screen. */
-function realign(){if(S&&S.inView&&!document.body.classList.contains('vf-full'))requestAnimationFrame(()=>alignFeed(false))}
+function realign(){if(S&&S.aligned&&!document.body.classList.contains('vf-full'))requestAnimationFrame(()=>alignFeed(false))}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(realign);
 {let w=innerWidth;addEventListener('resize',()=>{if(innerWidth!==w){w=innerWidth;setTimeout(realign,250)}},{passive:true})}
 
@@ -248,6 +267,7 @@ function alignFeed(smooth){
   if(!S)return;
   const hdr=document.getElementById('hdr');
   const top=S.root.getBoundingClientRect().top+scrollY-(hdr?hdr.offsetHeight:0);
+  S.aligned=true;
   scrollTo({top:Math.max(0,top),behavior:smooth&&!S.reduce?'smooth':'instant'});
 }
 
@@ -264,12 +284,12 @@ function close(opts){
   if(isFull())exitFull();
   const s=S; S=null;
   clearTimeout(s.deb);clearTimeout(s.flashT);clearTimeout(s.nbT);clearInterval(s.poll);
-  s.io.disconnect();s.vio.disconnect();
+  s.io.disconnect();s.vio.disconnect();removeEventListener('scroll',s.onScroll);
   s.players.forEach(r=>kill(r));
   s.players.clear();
   document.removeEventListener('keydown',onKey);
   document.removeEventListener('visibilitychange',onVis);
-  s.root.remove();s.host.hidden=true;markToggle('photos');
+  s.root.remove();const vp=document.getElementById('vf-pro');if(vp)vp.remove();s.host.hidden=true;markToggle('photos');
   const ph=document.getElementById('wk-photos');if(ph){ph.hidden=false;ph.classList.remove('wk-in');void ph.offsetWidth;ph.classList.add('wk-in')}
   document.body.classList.remove('vf-on','vf-in');
   if(opts&&opts.focus){

@@ -87,11 +87,20 @@ function html(){
 /* The ground's tint. Each slide carries a final ground colour and a glow colour (tints.py makes them). The stage sets two CSS
    variables on the page when a slide settles and the CSS eases the background (800ms, ease-out quint). Only the couple on
    screen sets it: hovering a category, a contents row or a photograph changes nothing. */
-const tintOf=d=>(d.q&&d.q.t)||d.c.tint||null;
+/* only a couple's slide has a colour (its own, else its chapter's): the prologue and the chapter openers stay the site's navy */
+const tintOf=d=>d.open?null:((d.q&&d.q.t)||d.c.tint||null);
 function setTint(t){
   if(!S)return;
   const st=S.host.style;
   if(t){st.setProperty('--tint',t.g);st.setProperty('--glow',t.l)}else{st.removeProperty('--tint');st.removeProperty('--glow')}
+}
+
+/* the ground only takes the colour while the stage is up under the header; the menu above it stays navy */
+function applyTint(){
+  if(!S)return;
+  const t=S.inStage?S.tintNow:null,k=t?t.g:'';
+  if(S.tintApplied===k)return;
+  S.tintApplied=k;setTint(t);
 }
 
 /* The glow: one soft pool of light on the ground, behind the photographs. One composited layer moved by transform only;
@@ -148,7 +157,7 @@ function activate(i){
     if(Math.abs(k-i)<=1)warm(k);else cool(k);
   });
   const d=S.data[i];
-  setTint(tintOf(d));glowStory(i);
+  S.tintNow=tintOf(d);applyTint();glowStory(i);
   VF.markCat(S.root,catIndex(d.c),S.reduce);
   S.live.textContent=d.open?d.c.name:d.q.couple+', '+d.c.name;
   if(window.cbLog)cbLog('ps active '+i+', live '+S.slides.filter(e=>e._live).length);
@@ -174,6 +183,7 @@ function measure(){
   if(!S||S.root.offsetParent===null)return;
   const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
   S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
+  applyTint();
   S.tucked=r.top<=vh*.5;
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
@@ -235,10 +245,10 @@ function unmount(){
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');
 }
-/* coming back from Films: the hidden stage lost its place. Only bring the stage up again if it was up before. */
+/* coming back from Films: land on the menu, like arriving on the page */
 function restore(){
   if(!S||S.root.offsetParent===null)return;
-  if(S.tucked)scrollTo({top:slideTop(Math.max(0,S.active)),behavior:'instant'});
+  scrollTo({top:0,behavior:'instant'});                  // switching tabs lands on the menu
   glowRest();observe();measure();
   VF.syncUL();
 }

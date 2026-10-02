@@ -152,10 +152,16 @@ const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.
 
 /* A category jump owns the selection until the page has actually landed. Safari can
    keep an old snap target through layout changes and queued observer callbacks. */
+function releaseTargets(state,jump){
+  state.host.classList.remove('ps-jump');
+  jump.target.classList.remove('ps-jump-target');
+}
 function finishJump(state,resume=true){
   if(!state.jump)return;
-  cancelAnimationFrame(state.jump.frame);state.jump=null;
-  if(resume&&S===state){observe();onScroll()}
+  const jump=state.jump;
+  cancelAnimationFrame(jump.frame);
+  releaseTargets(state,jump);state.jump=null;
+  if(resume&&S===state){observe();measure()}
 }
 function cancelJump(){if(S&&S.jump)finishJump(S)}
 
@@ -168,42 +174,36 @@ function go(id,smooth){
   finishJump(state,false);
   clearTimeout(state.deb);
   if(!id&&!smooth){activate(i);onScroll();return}
-  // Suspend snapping BEFORE warming/cooling strips, since those DOM changes can
-  // make Safari restore the old snap target before scrollTo even runs.
-  const jump=state.jump={frame:0,start:performance.now(),stable:0,snapping:false,restored:0};
+  const jump=state.jump={frame:0,start:performance.now(),stable:0,snapping:false,released:0,target:state.slides[i]};
+  // Suspend snapping only while replacing strips. When it returns, the requested
+  // opener is the sole vertical snap target until this category jump settles.
   state.host.classList.remove('snap-y');
+  jump.target.classList.add('ps-jump-target');
+  state.host.classList.add('ps-jump');
   if(state.io){state.io.disconnect();state.io.takeRecords()}
   void state.root.offsetHeight;
   state.cand=i;activate(i);
-  // Flush the destination's layout after strip replacement, then allow a paint
-  // before moving the page. The visible debug panel previously supplied this
-  // extra layout/render boundary on the affected iPhones.
   void state.root.offsetHeight;
   const land=now=>{
     if(S!==state||state.jump!==jump)return;
     if(!shown()){finishJump(state);return}
     const max=Math.max(0,state.host.scrollHeight-innerHeight);
     const top=Math.max(0,Math.min(max,slideTop(i)));
+    if(!jump.snapping){
+      // One scroll command per request. Never chase Safari with alternating
+      // snap states and repeated scrollTo calls, which may amplify a bounce.
+      scrollTo({top,behavior:'instant'});
+      jump.snapping=true;measure();
+      void state.root.offsetHeight;
+    }
     const landed=Math.abs(scrollY-top)<=2;
     jump.stable=landed?jump.stable+1:0;
-    if(!landed){
-      // Re-enabling snapping can itself move Safari to a stale snap target.
-      // Keep ownership through that handoff and correct only this button jump.
-      jump.snapping=false;jump.restored=0;
-      state.host.classList.remove('snap-y');
-      void state.root.offsetHeight;
-      scrollTo({top,behavior:'instant'});
-    }
     if(now-jump.start>=1200){finishJump(state);return}
-    if(jump.stable>=3){
-      if(!jump.snapping&&now-jump.start>=180){
-        jump.snapping=true;jump.restored=now;
-        measure();
-        void state.root.offsetHeight;
-      }else if(jump.snapping&&now-jump.restored>=180){
-        // Release observers only after the restored snap state also lands.
-        finishJump(state);return;
-      }
+    if(!jump.released&&jump.stable>=3&&now-jump.start>=180){
+      releaseTargets(state,jump);jump.released=now;
+      void state.root.offsetHeight;
+    }else if(jump.released&&jump.stable>=3&&now-jump.released>=180){
+      finishJump(state);return;
     }
     onScroll();jump.frame=requestAnimationFrame(land);
   };

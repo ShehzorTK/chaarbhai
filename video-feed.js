@@ -204,6 +204,7 @@ function open(id){
   if(found)data[found.i].mode=found.mode;
   const startAt=found?found.i:0;
 
+  if(window.PS)PS.suspend();
   const root=document.createElement('div');
   root.id='vf';root.className='vf';
   const catsOn=[];data.forEach((d,i)=>{if(!catsOn.some(c=>c[0]===d.cat))catsOn.push([d.cat,i])});

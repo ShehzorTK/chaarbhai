@@ -902,10 +902,19 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
   scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:calc(var(--hh,84px) + var(--psb))}
 .ps-end{height:calc((var(--ps-h0) - var(--psb)) * .16)}
 /* Local Photos preview: Films' internal scrolling path, with the existing
-   photo dimensions and native scroll chaining to the prologue and footer. */
+   photo dimensions. Entering the stage contains scrolling until navigation leaves. */
 .ps-internal .ps-feed{height:calc(var(--ps-h0) - var(--psb));overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;scrollbar-width:none}
 .ps-internal .ps-feed::-webkit-scrollbar{display:none}
 .ps-internal .ps-slide{scroll-margin-top:0}
+.ps-internal .ps-groundwrap{position:absolute;inset:0;height:auto;margin-bottom:0}
+html.ps-viewing{overflow:hidden;overscroll-behavior:none}
+body.ps-viewing{position:fixed;top:var(--ps-page-y);left:0;right:0;overflow:hidden}
+body.ps-viewing footer{display:none}
+.ps-contained{position:fixed;inset:0;height:100dvh;z-index:900;animation:none}
+.ps-contained .ps-feed{position:absolute;inset:0;box-sizing:border-box;height:100%;padding-top:0;scroll-padding-top:calc(var(--hh,84px) + var(--psb));overscroll-behavior-y:contain}
+.ps-contained header{position:sticky;top:0}
+.ps-contained .ps-bar{position:sticky;left:0;right:0}
+.ps-contained .ps-end{height:max(0px,calc(100dvh - var(--hh,84px) - var(--psb) - var(--ps-sh)))}
 .ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
 /* the one uppercase label style: the category line and a couple's tags. Nothing else on the stage is uppercase. */
 .ps-tags{margin:6px 0 0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.5;color:var(--dim)}

@@ -150,18 +150,52 @@ function activate(i){
 /* where the page must be scrolled for slide i to sit just under the header and the category line */
 const headH=()=>{const h=document.getElementById('hdr');return h?h.offsetHeight:0};
 const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.offsetHeight;
-const feedTop=(state,i)=>state.slides[i].getBoundingClientRect().top-state.feed.getBoundingClientRect().top+state.feed.scrollTop;
+const feedTop=(state,i)=>state.slides[i].getBoundingClientRect().top-state.feed.getBoundingClientRect().top+state.feed.scrollTop-(state.contained?headH()+state.bar.offsetHeight:0);
 
-/* Preview the same internal snap-scroller path used by Films. Native scroll
-   chaining at the feed edges keeps the outer prologue and footer reachable. */
+/* Once entered, the preview has one native vertical scroll owner, including
+   gestures on its fixed header and rail. Restore those nodes before hiding or
+   replacing Work; their existing listeners and navigation remain intact. */
+function containFeed(state){
+  if(!state.internal||state.contained)return;
+  state.pageY=scrollY;
+  state.header=document.getElementById('hdr');
+  state.headerHome=document.createComment('Photos header return point');
+  state.header.before(state.headerHome);
+  state.contained=true;
+  const pro=document.getElementById('pro');if(pro)pro.inert=true;
+  state.feed.prepend(state.header,state.bar);
+  state.root.classList.add('ps-contained');
+  document.body.style.setProperty('--ps-page-y',-state.pageY+'px');
+  document.body.classList.add('ps-viewing');
+  document.documentElement.classList.add('ps-viewing');
+  state.header.classList.remove('hide');
+  if(!state.jump)observe();
+}
+function releaseFeed(){
+  if(!S)return;
+  S.suspended=true;
+  if(!S.contained)return;
+  const state=S;
+  finishJump(state,false);
+  state.headerHome.replaceWith(state.header);
+  state.root.insertBefore(state.bar,state.feed);
+  state.root.classList.remove('ps-contained');
+  state.contained=false;
+  const pro=document.getElementById('pro');if(pro)pro.inert=false;
+  document.body.classList.remove('ps-viewing');
+  document.documentElement.classList.remove('ps-viewing');
+  document.body.style.removeProperty('--ps-page-y');
+  scrollTo({top:state.pageY,behavior:'instant'});
+}
+
+/* Keep the working smooth, feed-rooted category handoff. */
 function goFeed(state,i,smooth){
   const jump=state.jump={frame:0,start:performance.now(),stable:0};
   state.cand=i;
   if(state.io){state.io.disconnect();state.io.takeRecords()}
+  containFeed(state);
   const behavior=smooth&&!state.reduce?'smooth':'instant';
   state.feed.scrollTo({top:feedTop(state,i),behavior});
-  const outerTop=Math.max(0,state.root.getBoundingClientRect().top+scrollY-headH());
-  if(Math.abs(scrollY-outerTop)>2)scrollTo({top:outerTop,behavior});
   const land=now=>{
     if(S!==state||state.jump!==jump)return;
     if(!shown()){finishJump(state);return}
@@ -186,6 +220,7 @@ function cancelJump(){if(S&&S.jump)finishJump(S)}
 /* open on a category, instantly; ordinary Work entry stays on the prologue */
 function go(id,smooth){
   if(!S)return;
+  S.suspended=false;
   let i=0;
   if(id){const k=S.data.findIndex(d=>d.c.id===id);if(k>=0)i=k}
   const state=S;
@@ -234,11 +269,14 @@ function go(id,smooth){
 function measure(){
   if(!S)return;
   S.tick=0;
-  if(S.root.offsetParent===null)return;
+  if(!shown())return;
   const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
-  S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
+  if(S.internal&&!S.contained&&r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight)containFeed(S);
+  S.inStage=S.contained||(r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight);                   // the stage is up under the header
   applyTint();
-  S.tucked=r.top<=vh*.5;
+  // The internal stage no longer pulls the document through a tall photo page.
+  // Keep the opening contents visible until they have passed behind the header.
+  S.tucked=S.internal?r.top<=hh:r.top<=vh*.5;
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
@@ -247,7 +285,7 @@ function measure(){
 }
 /* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in
    measure()); the menu above it scrolls freely. Left and Right step the photographs of the couple on screen. */
-const shown=()=>S&&S.root.offsetParent!==null;
+const shown=()=>S&&!S.suspended&&S.root.getClientRects().length>0&&!document.body.classList.contains('vf-on');
 function onKey(e){
   const k=e.key;
   if((k!=='ArrowRight'&&k!=='ArrowLeft')||!shown()||e.defaultPrevented||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!S.inStage||S.active<0)return;
@@ -261,7 +299,7 @@ function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
 function observe(){
   if(S.io)S.io.disconnect();
-  const top=S.internal?0:headH()+S.bar.offsetHeight;
+  const top=S.internal&&!S.contained?0:headH()+S.bar.offsetHeight;
   const state=S;
   const observer=new IntersectionObserver(es=>{
     if(S!==state||state.io!==observer||state.jump)return;
@@ -319,6 +357,7 @@ function mount(then){
 }
 function unmount(){
   if(!S)return;
+  releaseFeed();
   finishJump(S,false);
   clearTimeout(S.deb);if(S.io)S.io.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
@@ -332,7 +371,9 @@ function unmount(){
 }
 /* coming back from Films: land on the menu, like arriving on the page */
 function restore(){
-  if(!S||S.root.offsetParent===null)return;
+  if(!S||!S.root.getClientRects().length)return;
+  releaseFeed();
+  S.suspended=false;
   finishJump(S,false);
   clearTimeout(S.deb);
   if(S.internal){S.feed.scrollTo({top:0,behavior:'instant'});activate(0)}
@@ -341,5 +382,5 @@ function restore(){
   VF.syncUL();
 }
 
-window.PS={html,mount,unmount,restore,go};
+window.PS={html,mount,unmount,restore,go,suspend:releaseFeed};
 })();

@@ -1703,6 +1703,7 @@ function render(path){
   clearTimeout(navIdle);
   if(window.cbLog)cbLog('render '+path);
   VF.close();
+  PS.unmount(); // Restore the Photos-owned header before replacing its DOM.
   page.innerHTML=(P[path]||P['/'])();
   document.querySelectorAll('nav.links a[data-nav]').forEach(a=>{
     const cur=a.getAttribute('href')==='#'+path;
@@ -1860,6 +1861,7 @@ function photoChapter(){
 function workSync(){
   const m=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
   if(!m){VF.close({focus:true});const chapter=photoChapter();if(chapter)PS.go(chapter,true);else PS.restore();return}
+  PS.suspend(); // Release Photos before the asynchronous Films handoff.
   preGone.then(()=>{                              // not behind the loading screen
     const m2=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
     if(m2)VF.open(m2[1]);

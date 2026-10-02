@@ -150,24 +150,47 @@ function activate(i){
 const headH=()=>{const h=document.getElementById('hdr');return h?h.offsetHeight:0};
 const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.offsetHeight;
 
-/* open on a category (by chapter id, e.g. "henna"), or on the first couple. Lands at once, no scroll animation. */
+/* A category jump owns the selection until the page has actually landed. Safari can
+   keep an old snap target through layout changes and queued observer callbacks. */
+function finishJump(state,resume=true){
+  if(!state.jump)return;
+  cancelAnimationFrame(state.jump.frame);state.jump=null;
+  if(resume&&S===state){observe();onScroll()}
+}
+function cancelJump(){if(S&&S.jump)finishJump(S)}
+
+/* open on a category, instantly; ordinary Work entry stays on the prologue */
 function go(id,smooth){
   if(!S)return;
   let i=0;
   if(id){const k=S.data.findIndex(d=>d.c.id===id);if(k>=0)i=k}
   const state=S;
-  S.cand=i;clearTimeout(S.deb);activate(i);
-  if(!id&&!smooth){onScroll();return}   // ordinary Work entry stays on the prologue
-  // Safari can snap an instant category jump back to the previous slide.
-  // Let the header observer finish first, jump with snapping suspended, then restore it by measuring.
-  requestAnimationFrame(()=>{
-    if(S!==state||!shown())return;
-    S.host.classList.remove('snap-y');
-    void S.root.offsetHeight;
-    scrollTo({top:slideTop(i),behavior:'instant'});
-    S.cand=i;clearTimeout(S.deb);
-    onScroll();
-  });
+  finishJump(state,false);
+  clearTimeout(state.deb);
+  if(!id&&!smooth){activate(i);onScroll();return}
+  // Suspend snapping BEFORE warming/cooling strips, since those DOM changes can
+  // make Safari restore the old snap target before scrollTo even runs.
+  const jump=state.jump={frame:0,start:performance.now(),stable:0};
+  state.host.classList.remove('snap-y');
+  if(state.io){state.io.disconnect();state.io.takeRecords()}
+  void state.root.offsetHeight;
+  state.cand=i;activate(i);
+  const land=now=>{
+    if(S!==state||state.jump!==jump)return;
+    if(!shown()){finishJump(state);return}
+    const max=Math.max(0,state.host.scrollHeight-innerHeight);
+    const top=Math.max(0,Math.min(max,slideTop(i)));
+    const landed=Math.abs(scrollY-top)<=2;
+    jump.stable=landed?jump.stable+1:0;
+    if(!landed)scrollTo({top,behavior:'instant'});
+    // Several settled frames plus a short quiet window let Safari finish its
+    // scroll/layout work. Never leave navigation locked if it cannot settle.
+    if((jump.stable>=3&&now-jump.start>=180)||now-jump.start>=1000){
+      finishJump(state);return;
+    }
+    onScroll();jump.frame=requestAnimationFrame(land);
+  };
+  jump.frame=requestAnimationFrame(land);
 }
 
 /* what the page's position means for the stage: is it under the header, should it snap, has the prologue tucked away.
@@ -183,7 +206,7 @@ function measure(){
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
-  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
+  document.documentElement.classList.toggle('snap-y',!S.jump&&S.inStage&&r.bottom>=vh-4);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
 /* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in
@@ -203,14 +226,17 @@ function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 function observe(){
   if(S.io)S.io.disconnect();
   const top=headH()+S.bar.offsetHeight;
-  S.io=new IntersectionObserver(es=>{
+  const state=S;
+  const observer=new IntersectionObserver(es=>{
+    if(S!==state||state.io!==observer||state.jump)return;
     es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=0.6)S.cand=+e.target.dataset.i});
     clearTimeout(S.deb);
-    S.deb=setTimeout(()=>{if(S&&S.cand>=0)activate(S.cand)},90);     // not while a fling is still going past
+    S.deb=setTimeout(()=>{if(S===state&&!state.jump&&state.cand>=0)activate(state.cand)},90);     // not while a fling is still going past
   },{rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
+  S.io=observer;
   S.slides.forEach(el=>S.io.observe(el));
 }
-function onResize(){if(!S)return;observe();onScroll()}
+function onResize(){if(!S)return;if(!S.jump)observe();onScroll()}
 
 /* ?notint switches the ground tint off, to find out whether it is what a browser chokes on (read once, at mount) */
 const Q={has:k=>new URLSearchParams(location.search).has(k)};
@@ -224,6 +250,8 @@ function mount(then){
   S.slides.forEach(el=>{el.inert=true});
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
+  addEventListener('wheel',cancelJump,{passive:true});
+  addEventListener('touchmove',cancelJump,{passive:true});
   document.addEventListener('keydown',onKey);
   observe();
   const jump=b=>{if(S&&S.root===root&&b)go(S.data[+b.dataset.first].c.id,true)};
@@ -254,10 +282,12 @@ function mount(then){
 }
 function unmount(){
   if(!S)return;
+  finishJump(S,false);
   clearTimeout(S.deb);if(S.io)S.io.disconnect();
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
   S.host.style.removeProperty('--tint');S.host.style.removeProperty('--tint-l');
   document.documentElement.classList.remove('snap-y');
+  removeEventListener('wheel',cancelJump);removeEventListener('touchmove',cancelJump);
   removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);
   S=null;
   if(!(window.VF&&VF.isOpen()))document.body.classList.remove('vf-in');

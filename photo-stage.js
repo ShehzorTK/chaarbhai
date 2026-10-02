@@ -170,11 +170,15 @@ function go(id,smooth){
   if(!id&&!smooth){activate(i);onScroll();return}
   // Suspend snapping BEFORE warming/cooling strips, since those DOM changes can
   // make Safari restore the old snap target before scrollTo even runs.
-  const jump=state.jump={frame:0,start:performance.now(),stable:0};
+  const jump=state.jump={frame:0,start:performance.now(),stable:0,snapping:false,restored:0};
   state.host.classList.remove('snap-y');
   if(state.io){state.io.disconnect();state.io.takeRecords()}
   void state.root.offsetHeight;
   state.cand=i;activate(i);
+  // Flush the destination's layout after strip replacement, then allow a paint
+  // before moving the page. The visible debug panel previously supplied this
+  // extra layout/render boundary on the affected iPhones.
+  void state.root.offsetHeight;
   const land=now=>{
     if(S!==state||state.jump!==jump)return;
     if(!shown()){finishJump(state);return}
@@ -182,15 +186,30 @@ function go(id,smooth){
     const top=Math.max(0,Math.min(max,slideTop(i)));
     const landed=Math.abs(scrollY-top)<=2;
     jump.stable=landed?jump.stable+1:0;
-    if(!landed)scrollTo({top,behavior:'instant'});
-    // Several settled frames plus a short quiet window let Safari finish its
-    // scroll/layout work. Never leave navigation locked if it cannot settle.
-    if((jump.stable>=3&&now-jump.start>=180)||now-jump.start>=1000){
-      finishJump(state);return;
+    if(!landed){
+      // Re-enabling snapping can itself move Safari to a stale snap target.
+      // Keep ownership through that handoff and correct only this button jump.
+      jump.snapping=false;jump.restored=0;
+      state.host.classList.remove('snap-y');
+      void state.root.offsetHeight;
+      scrollTo({top,behavior:'instant'});
+    }
+    if(now-jump.start>=1200){finishJump(state);return}
+    if(jump.stable>=3){
+      if(!jump.snapping&&now-jump.start>=180){
+        jump.snapping=true;jump.restored=now;
+        measure();
+        void state.root.offsetHeight;
+      }else if(jump.snapping&&now-jump.restored>=180){
+        // Release observers only after the restored snap state also lands.
+        finishJump(state);return;
+      }
     }
     onScroll();jump.frame=requestAnimationFrame(land);
   };
-  jump.frame=requestAnimationFrame(land);
+  jump.frame=requestAnimationFrame(()=>{
+    if(S===state&&state.jump===jump)jump.frame=requestAnimationFrame(land);
+  });
 }
 
 /* what the page's position means for the stage: is it under the header, should it snap, has the prologue tucked away.
@@ -206,7 +225,7 @@ function measure(){
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
-  document.documentElement.classList.toggle('snap-y',!S.jump&&S.inStage&&r.bottom>=vh-4);
+  document.documentElement.classList.toggle('snap-y',(!S.jump||S.jump.snapping)&&S.inStage&&r.bottom>=vh-4);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
 /* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in

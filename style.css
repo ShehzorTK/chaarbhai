@@ -901,6 +901,11 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps-slide{box-sizing:border-box;height:var(--ps-sh);padding-top:clamp(16px,2.6svh,26px);display:flex;flex-direction:column;
   scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:calc(var(--hh,84px) + var(--psb))}
 .ps-end{height:calc((var(--ps-h0) - var(--psb)) * .16)}
+/* Local Photos preview: Films' internal scrolling path, with the existing
+   photo dimensions and native scroll chaining to the prologue and footer. */
+.ps-internal .ps-feed{height:calc(var(--ps-h0) - var(--psb));overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;scrollbar-width:none}
+.ps-internal .ps-feed::-webkit-scrollbar{display:none}
+.ps-internal .ps-slide{scroll-margin-top:0}
 .ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
 /* the one uppercase label style: the category line and a couple's tags. Nothing else on the stage is uppercase. */
 .ps-tags{margin:6px 0 0;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;line-height:1.5;color:var(--dim)}

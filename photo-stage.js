@@ -73,7 +73,8 @@ function bodyHTML(d){
 function html(){
   const data=flat();if(data.length<2)return '';
   const cats=[];data.forEach((d,i)=>{const k=catIndex(d.c);if(!cats.some(x=>x[0]===k))cats.push([k,i])});
-  return prologueHTML()+`<div class="ps wk-in" id="ps" data-n="${data.length}">
+  const feedPreview=new URLSearchParams(location.search).get('photos-scroll')==='feed';
+  return prologueHTML()+`<div class="ps wk-in${feedPreview?' ps-internal':''}" id="ps" data-n="${data.length}">
   <div class="ps-groundwrap" aria-hidden="true"><i class="ps-ground"></i></div>
   <div class="ps-bar">${VF.catLineHTML(cats,'Jump to a category of photographs')}</div>
   <div class="ps-feed" role="region" aria-label="Photographs, one couple at a time">${data.map((d,i)=>d.open
@@ -149,6 +150,29 @@ function activate(i){
 /* where the page must be scrolled for slide i to sit just under the header and the category line */
 const headH=()=>{const h=document.getElementById('hdr');return h?h.offsetHeight:0};
 const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.offsetHeight;
+const feedTop=(state,i)=>state.slides[i].getBoundingClientRect().top-state.feed.getBoundingClientRect().top+state.feed.scrollTop;
+
+/* Preview the same internal snap-scroller path used by Films. Native scroll
+   chaining at the feed edges keeps the outer prologue and footer reachable. */
+function goFeed(state,i,smooth){
+  const jump=state.jump={frame:0,start:performance.now(),stable:0};
+  state.cand=i;
+  if(state.io){state.io.disconnect();state.io.takeRecords()}
+  const behavior=smooth&&!state.reduce?'smooth':'instant';
+  state.feed.scrollTo({top:feedTop(state,i),behavior});
+  const outerTop=Math.max(0,state.root.getBoundingClientRect().top+scrollY-headH());
+  if(Math.abs(scrollY-outerTop)>2)scrollTo({top:outerTop,behavior});
+  const land=now=>{
+    if(S!==state||state.jump!==jump)return;
+    if(!shown()){finishJump(state);return}
+    const top=Math.min(feedTop(state,i),Math.max(0,state.feed.scrollHeight-state.feed.clientHeight));
+    jump.stable=Math.abs(state.feed.scrollTop-top)<=2?jump.stable+1:0;
+    if(jump.stable>=3){activate(i);finishJump(state);return}
+    if(now-jump.start>=3000){finishJump(state);return}
+    jump.frame=requestAnimationFrame(land);
+  };
+  jump.frame=requestAnimationFrame(land);
+}
 
 /* A category jump owns the selection until the page has actually landed. Safari can
    keep an old snap target through layout changes and queued observer callbacks. */
@@ -168,6 +192,7 @@ function go(id,smooth){
   finishJump(state,false);
   clearTimeout(state.deb);
   if(!id&&!smooth){activate(i);onScroll();return}
+  if(state.internal){goFeed(state,i,smooth);return}
   const jump=state.jump={frame:0,start:performance.now(),stable:0,scrolled:false,activated:false,activatedAt:0};
   if(state.io){state.io.disconnect();state.io.takeRecords()}
   // Openers already exist. Keep the current strips intact until the native
@@ -217,7 +242,7 @@ function measure(){
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
-  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
+  document.documentElement.classList.toggle('snap-y',!S.internal&&S.inStage&&r.bottom>=vh-4);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
 /* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in
@@ -236,14 +261,14 @@ function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 
 function observe(){
   if(S.io)S.io.disconnect();
-  const top=headH()+S.bar.offsetHeight;
+  const top=S.internal?0:headH()+S.bar.offsetHeight;
   const state=S;
   const observer=new IntersectionObserver(es=>{
     if(S!==state||state.io!==observer||state.jump)return;
     es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=0.6)S.cand=+e.target.dataset.i});
     clearTimeout(S.deb);
     S.deb=setTimeout(()=>{if(S===state&&!state.jump&&state.cand>=0)activate(state.cand)},90);     // not while a fling is still going past
-  },{rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
+  },{root:S.internal?S.feed:null,rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
   S.io=observer;
   S.slides.forEach(el=>S.io.observe(el));
 }
@@ -255,12 +280,13 @@ function mount(then){
   unmount();
   const root=document.getElementById('ps');if(!root)return;
   const data=flat();
-  S={root,data,bar:$('.ps-bar',root),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
+  S={root,data,bar:$('.ps-bar',root),feed:$('.ps-feed',root),internal:root.classList.contains('ps-internal'),slides:[...root.querySelectorAll('.ps-slide')],live:$('.vf-sr[role=status]',root),
      reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,active:-1,cand:-1,deb:0,
      host:document.documentElement,notint:Q.has('notint')};
   S.slides.forEach(el=>{el.inert=true});
   addEventListener('resize',onResize,{passive:true});
   addEventListener('scroll',onScroll,{passive:true});
+  if(S.internal)S.feed.addEventListener('scroll',onScroll,{passive:true});
   addEventListener('wheel',cancelJump,{passive:true});
   addEventListener('touchmove',cancelJump,{passive:true});
   document.addEventListener('keydown',onKey);
@@ -298,6 +324,7 @@ function unmount(){
   const pro=document.getElementById('pro');if(pro&&S.proClick)pro.removeEventListener('click',S.proClick);
   S.host.style.removeProperty('--tint');S.host.style.removeProperty('--tint-l');
   document.documentElement.classList.remove('snap-y');
+  S.feed.removeEventListener('scroll',onScroll);
   removeEventListener('wheel',cancelJump);removeEventListener('touchmove',cancelJump);
   removeEventListener('resize',onResize);removeEventListener('scroll',onScroll);document.removeEventListener('keydown',onKey);
   S=null;
@@ -306,6 +333,9 @@ function unmount(){
 /* coming back from Films: land on the menu, like arriving on the page */
 function restore(){
   if(!S||S.root.offsetParent===null)return;
+  finishJump(S,false);
+  clearTimeout(S.deb);
+  if(S.internal){S.feed.scrollTo({top:0,behavior:'instant'});activate(0)}
   scrollTo({top:0,behavior:'instant'});                  // switching tabs lands on the menu
   observe();measure();
   VF.syncUL();

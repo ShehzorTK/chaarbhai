@@ -155,15 +155,27 @@ function go(id,smooth){
   if(!S)return;
   let i=0;
   if(id){const k=S.data.findIndex(d=>d.c.id===id);if(k>=0)i=k}
-  if(id||smooth)scrollTo({top:slideTop(i),behavior:'instant'});   // no chapter asked for: stay on the prologue
-  if(!smooth)activate(i);
+  const state=S;
+  S.cand=i;clearTimeout(S.deb);activate(i);
+  if(!id&&!smooth){onScroll();return}   // ordinary Work entry stays on the prologue
+  // Safari can snap an instant category jump back to the previous slide.
+  // Let the header observer finish first, jump with snapping suspended, then restore it by measuring.
+  requestAnimationFrame(()=>{
+    if(S!==state||!shown())return;
+    S.host.classList.remove('snap-y');
+    void S.root.offsetHeight;
+    scrollTo({top:slideTop(i),behavior:'instant'});
+    S.cand=i;clearTimeout(S.deb);
+    onScroll();
+  });
 }
 
 /* what the page's position means for the stage: is it under the header, should it snap, has the prologue tucked away.
    One cheap read per frame while the page scrolls. */
 function measure(){
+  if(!S)return;
   S.tick=0;
-  if(!S||S.root.offsetParent===null)return;
+  if(S.root.offsetParent===null)return;
   const r=S.root.getBoundingClientRect(),hh=headH(),vh=innerHeight;
   S.inStage=r.top<=hh+1&&r.bottom>hh+S.bar.offsetHeight;                   // the stage is up under the header
   applyTint();
@@ -214,10 +226,26 @@ function mount(then){
   addEventListener('scroll',onScroll,{passive:true});
   document.addEventListener('keydown',onKey);
   observe();
-  root.addEventListener('click',e=>{
-    const b=e.target.closest('.cl-b');if(!b)return;
-    go(S.data[+b.dataset.first].c.id,true);
-  });
+  const jump=b=>{if(S&&S.root===root&&b)go(S.data[+b.dataset.first].c.id,true)};
+  root.addEventListener('click',e=>jump(e.target.closest('.cl-b')));
+  // iPhone Safari can suppress click after a scroll. Handle a stationary touch explicitly,
+  // while leaving sideways category swipes and vertical page scrolling to the browser.
+  let tap=null;
+  S.bar.addEventListener('touchstart',e=>{
+    const b=e.target.closest('.cl-b'),t=e.touches[0];
+    tap=b&&e.touches.length===1?{b,x:t.clientX,y:t.clientY}:null;
+  },{passive:true});
+  S.bar.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    if(tap&&(!t||e.touches.length!==1||Math.hypot(t.clientX-tap.x,t.clientY-tap.y)>8))tap=null;
+  },{passive:true});
+  S.bar.addEventListener('touchend',e=>{
+    const start=tap;tap=null;const t=e.changedTouches[0];
+    if(!start||!t||e.touches.length||Math.hypot(t.clientX-start.x,t.clientY-start.y)>8||e.target.closest('.cl-b')!==start.b)return;
+    if(e.cancelable)e.preventDefault();
+    jump(start.b);
+  },{passive:false});
+  S.bar.addEventListener('touchcancel',()=>{tap=null},{passive:true});
   /* the contents list is the way in: open the stage on that chapter */
   const pro=document.getElementById('pro');
   if(pro){S.proClick=e=>{const b=e.target.closest('.pro-row');if(b)go(b.dataset.ch,true)};pro.addEventListener('click',S.proClick)}
@@ -242,5 +270,5 @@ function restore(){
   VF.syncUL();
 }
 
-window.PS={html,mount,unmount,restore};
+window.PS={html,mount,unmount,restore,go};
 })();

@@ -174,7 +174,7 @@ P['/']=()=>`
   <h2 class="d2 rv" style="margin-bottom:clamp(26px,3vw,40px)">Recent work</h2>
   <div class="ilist">
     ${CHAPTERS.map((c,i)=>`
-      <button class="irow short rv" data-nav-to="#/portfolio" data-then="ch-${c.id}" data-d="${i%4}">
+      <button class="irow short rv" data-nav-to="#/portfolio/photos/${c.id}" data-d="${i%4}">
         <span class="thumb">${pic(c.cover,'62px',{alt:''})}</span>
         <span class="t">${c.name}</span>
         <span class="y">View</span>
@@ -1487,7 +1487,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     const from=art.getBoundingClientRect();
     header.classList.add('cb-logo-landing');
     const to=small.getBoundingClientRect();
-    if(reduceMotion()||from.width<1||from.height<1){placeholder.remove();dispose();return;}
+    if(reduceMotion()||!Element.prototype.animate||from.width<1||from.height<1){reveal();placeholder.remove();dispose();return;}
     flight=document.createElement('div');flight.setAttribute('aria-hidden','true');flight.className='cb-logo-flight';
     flight.innerHTML=`<img src="img/pen-loader-1${isLight()?'-dark':''}.png" alt="">`;
     if(isLight())flight.classList.add('cb-flight-light');
@@ -1588,10 +1588,9 @@ function reel(){
   const el=document.getElementById('reel');if(!el)return;
   const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
   // shows the video: called when the video plays or when the logo lands after its safety timeout, whichever comes first
-  let revealed=false;
-  const reveal=()=>{revealed=true;const f=playerShell.querySelector('iframe');if(f)f.classList.add('on');playerShell.classList.add('is-playing')};
+  let revealed=false,shown=false;
+  const reveal=()=>{revealed=true;if(!shown)return;const f=playerShell.querySelector('iframe');if(f)f.classList.add('on');playerShell.classList.add('is-playing')};
   heroLogo=homeLogo(placeholder,firstHeroVisit(),reveal);const logo=heroLogo;
-  let shown=false;
   if(reduceMotion())return;
   // YouTube won't play embeds on a page opened straight from disk (file://):
   // it needs a real web address to check where it's embedded. The poster
@@ -1607,7 +1606,7 @@ function reel(){
       videoId:REEL,
       playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
       events:{
-        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');if(revealed)f.classList.add('on');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
+        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');if(revealed&&shown)f.classList.add('on');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
           f.title='Chaar Bhai wedding film reel';
           // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
           const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
@@ -1615,7 +1614,7 @@ function reel(){
             if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
         onStateChange:e=>{
           if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
-            shown=true;if(!logo.holdsReveal)reveal();
+            shown=true;if(revealed||!logo.holdsReveal)reveal();
             logo.playing();
           }
           if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}
@@ -1720,7 +1719,7 @@ function render(path){
   if(path==='/portfolio'){sub.innerHTML=VF.toggleHTML('photos');sub.hidden=false}else{sub.hidden=true;sub.textContent=''}
   document.getElementById('hdr').classList.remove('hide');heroNav();
   observe();photoWindow();
-  if(path==='/portfolio'){PS.mount(jumpAfter&&jumpAfter.replace(/^ch-/,''));VF.syncUL()}else PS.unmount();
+  if(path==='/portfolio'){PS.mount(photoChapter()||(jumpAfter&&jumpAfter.replace(/^ch-/,'')));VF.syncUL()}else PS.unmount();
   jumpAfter=null;
   letterForm();pricing();reel();tallyQueue();
   paintLogos();labelFills();
@@ -1854,9 +1853,13 @@ async function go(){
    Old #/portfolio/videos links still work: they are rewritten to films.
    routeOf gives the page a hash belongs to, so switching view doesn't redraw or animate the page. */
 function routeOf(h){const p=(h||'#/').slice(1);return p==='/portfolio'||p.indexOf('/portfolio/')===0?'/portfolio':p}
+function photoChapter(){
+  const m=/^#\/portfolio\/photos\/([\w-]+)\/?$/.exec(location.hash);
+  return m&&CHAPTERS.some(c=>c.id===m[1])?m[1]:null;
+}
 function workSync(){
   const m=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
-  if(!m){VF.close({focus:true});PS.restore();return}
+  if(!m){VF.close({focus:true});const chapter=photoChapter();if(chapter)PS.go(chapter,true);else PS.restore();return}
   preGone.then(()=>{                              // not behind the loading screen
     const m2=/^\/portfolio\/(?:films|videos)(?:\/([\w-]+))?\/?$/.exec(location.hash.slice(1));
     if(m2)VF.open(m2[1]);
@@ -1891,7 +1894,7 @@ document.getElementById('skip').addEventListener('click',()=>{
 
 /* Home, light mode: the bar stays clear over the hero (like dark mode) and turns navy only once the hero is scrolled past */
 /* Home tally mosaic: n different frames dealt round-robin across the couples so no two neighbours come from the same wedding,
-   none repeating a photo Home already shows. The middle tile is PICKS.tally: it opens the scene at full screen. */
+   none repeating a photo Home already shows. The middle tile is PICKS.tally: it opens as a complete photograph fitted to the screen. */
 function mosaicTiles(n){
   const mid={...PICKS.tally};
   const used=new Set([PICKS.hero,PICKS.stay,PICKS.back,mid,...Object.values(PICKS.covers)].map(f=>f.src));
@@ -1911,28 +1914,43 @@ function mosaicTiles(n){
   picks.splice(Math.floor(n/2),0,mid);
   return picks;
 }
-/* The mosaic starts scaled so the centre tile fills the screen, scrubs out to the whole wall, then dims under the caption.
+/* The mosaic starts scaled so the complete centre photograph fits the screen, scrubs out to the whole wall, then dims under the caption.
    The section is tall and its content sticks (CSS); scroll position drives it directly, no library, no number counts up. */
 let tallyRaf=0;
 function tallyScene(){
   tallyRaf=0;
   const sec=document.querySelector('.tally-live');if(!sec)return;
-  const mosaic=sec.querySelector('.mosaic'),cap=sec.querySelector('.tally-cap'),mid=mosaic&&mosaic.querySelector('.mo-mid');if(!mid)return;
-  const vh=innerHeight,r=sec.getBoundingClientRect();
+  const mosaic=sec.querySelector('.mosaic'),cap=sec.querySelector('.tally-cap');if(!mosaic)return;
+  const expected=innerWidth<=900?35:45;
+  if(mosaic.children.length!==expected){
+    const tiles=mosaicTiles(expected),centre=Math.floor(tiles.length/2);
+    mosaic.innerHTML=tiles.map((f,i)=>`<div class="mo-t${i===centre?' mo-mid':''}">${pic(f,i===centre?'100vw':'12vw',{alt:i===centre?f.alt:'',eager:i===centre})}</div>`).join('');
+    delete sec.dataset.warm;
+  }
+  const mid=mosaic.querySelector('.mo-mid');if(!mid)return;
+  const vh=sec.querySelector('.tally-pin').clientHeight,r=sec.getBoundingClientRect();
   if(r.top<vh*3&&!sec.dataset.warm){sec.dataset.warm=1;mosaic.querySelectorAll('img[loading="lazy"]').forEach(i=>i.loading='eager')}   // the wall is clipped out of view until the zoom-out, so fetch it early
   if(r.bottom<-vh||r.top>vh*2)return;                       // far away: nothing to move
-  const desk=innerWidth>900,cols=desk?9:5,rows=desk?5:7;
+  const count=mosaic.children.length,desk=count===45,cols=desk?9:5,rows=desk?5:7;
   const idx=[...mosaic.children].indexOf(mid),col=idx%cols,row=Math.floor(idx/cols);
-  const tw=innerWidth/cols,th=vh/rows;
-  const from=Math.max(innerWidth/tw,vh/th,1)*1.02;
+  // Fit the complete central photograph inside the opening on every screen.
+  // Its tile and the viewport have different aspect ratios; cover/scale-by-columns crops faces.
+  const image=mid.querySelector('img'),ar=image.naturalWidth&&image.naturalHeight?image.naturalWidth/image.naturalHeight:Number(image.getAttribute('width'))/Number(image.getAttribute('height'));
+  const photoW=Math.min(mid.clientWidth,mid.clientHeight*ar),photoH=photoW/ar;
+  const pin=sec.querySelector('.tally-pin');
+  const from=Math.max(1,Math.min(pin.clientWidth*.92/photoW,vh*.86/photoH));
   const p=Math.max(0,Math.min(1,-r.top/Math.max(1,r.height-vh)));
   const seg=(a,b)=>Math.max(0,Math.min(1,(p-a)/(b-a)));
   const e=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;               // power2.inOut
   const z=e(seg(0,.62)),s=from+(1-from)*z;
   mosaic.style.transformOrigin=`${(col+.5)/cols*100}% ${(row+.5)/rows*100}%`;
   mosaic.style.transform=`scale(${s.toFixed(4)})`;
+  // Start with the complete photograph, then fill its tile as the surrounding wall appears.
+  const fill=Math.max(mid.clientWidth/photoW,mid.clientHeight/photoH);
+  mosaic.style.setProperty('--mo-photo-scale',(1+(fill-1)*z).toFixed(4));
   const dim=seg(.66,.96);
   mosaic.style.setProperty('--mo-dim',(1-.8*dim).toFixed(3));
+  mosaic.style.setProperty('--mo-neighbours',(Math.min(1,z*4)*(1-.8*dim)).toFixed(3));
   mosaic.style.setProperty('--mo-mid',(1-.65*dim).toFixed(3));
   const c=seg(.7,1);cap.style.opacity=c.toFixed(3);sec.style.setProperty('--cap-o',c.toFixed(3));cap.style.transform=`translateY(${(40*(1-c)).toFixed(1)}px)`;
 }

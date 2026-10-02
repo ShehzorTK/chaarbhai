@@ -861,11 +861,6 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
    one peeks in below it. Photographs stay bare: no stroke, frame or shadow. Depth comes from space. */
 html.on-work{scroll-snap-type:none}   /* the menu above the stage scrolls natively, no snapping */
 html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
-/* Only during an owned Photos category jump: keep native y snapping, but give
-   it one destination. Removing ps-jump restores every ordinary slide target.
-   Photo frames keep their independent horizontal snap rules. */
-html.ps-jump .pro,html.ps-jump #ps .ps-slide:not(.ps-jump-target){scroll-snap-align:none;scroll-snap-stop:normal}
-
 html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
 /* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
 :root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--tint,var(--hdr));-webkit-backdrop-filter:none;backdrop-filter:none}

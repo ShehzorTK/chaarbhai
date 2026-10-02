@@ -152,15 +152,9 @@ const slideTop=i=>S.slides[i].getBoundingClientRect().top+scrollY-headH()-S.bar.
 
 /* A category jump owns the selection until the page has actually landed. Safari can
    keep an old snap target through layout changes and queued observer callbacks. */
-function releaseTargets(state,jump){
-  state.host.classList.remove('ps-jump');
-  jump.target.classList.remove('ps-jump-target');
-}
 function finishJump(state,resume=true){
   if(!state.jump)return;
-  const jump=state.jump;
-  cancelAnimationFrame(jump.frame);
-  releaseTargets(state,jump);state.jump=null;
+  cancelAnimationFrame(state.jump.frame);state.jump=null;
   if(resume&&S===state){observe();measure()}
 }
 function cancelJump(){if(S&&S.jump)finishJump(S)}
@@ -174,35 +168,29 @@ function go(id,smooth){
   finishJump(state,false);
   clearTimeout(state.deb);
   if(!id&&!smooth){activate(i);onScroll();return}
-  const jump=state.jump={frame:0,start:performance.now(),stable:0,snapping:false,released:0,target:state.slides[i]};
-  // Suspend snapping only while replacing strips. When it returns, the requested
-  // opener is the sole vertical snap target until this category jump settles.
-  state.host.classList.remove('snap-y');
-  jump.target.classList.add('ps-jump-target');
-  state.host.classList.add('ps-jump');
+  const jump=state.jump={frame:0,start:performance.now(),stable:0,scrolled:false};
   if(state.io){state.io.disconnect();state.io.takeRecords()}
-  void state.root.offsetHeight;
+  // Prepare the destination without changing the snap type or eligible targets.
+  // Element-directed scrolling lets the browser use this opener's snap position
+  // and its existing scroll-margin, rather than selecting from a pixel offset.
   state.cand=i;activate(i);
   void state.root.offsetHeight;
+  measure();
   const land=now=>{
     if(S!==state||state.jump!==jump)return;
     if(!shown()){finishJump(state);return}
+    if(!jump.scrolled){
+      jump.scrolled=true;
+      state.slides[i].scrollIntoView({behavior:'instant',block:'start',inline:'nearest'});
+      measure();
+    }
     const max=Math.max(0,state.host.scrollHeight-innerHeight);
     const top=Math.max(0,Math.min(max,slideTop(i)));
-    if(!jump.snapping){
-      // One scroll command per request. Never chase Safari with alternating
-      // snap states and repeated scrollTo calls, which may amplify a bounce.
-      scrollTo({top,behavior:'instant'});
-      jump.snapping=true;measure();
-      void state.root.offsetHeight;
-    }
     const landed=Math.abs(scrollY-top)<=2;
     jump.stable=landed?jump.stable+1:0;
-    if(now-jump.start>=1200){finishJump(state);return}
-    if(!jump.released&&jump.stable>=3&&now-jump.start>=180){
-      releaseTargets(state,jump);jump.released=now;
-      void state.root.offsetHeight;
-    }else if(jump.released&&jump.stable>=3&&now-jump.released>=180){
+    // Guard selection while the native operation settles; never issue a second
+    // scroll or change snap properties to chase an unexpected device landing.
+    if((jump.stable>=3&&now-jump.start>=180)||now-jump.start>=1200){
       finishJump(state);return;
     }
     onScroll();jump.frame=requestAnimationFrame(land);
@@ -225,7 +213,7 @@ function measure(){
   document.body.classList.toggle('vf-in',S.inStage);
   if(S.inStage){const h=document.getElementById('hdr');if(h)h.classList.remove('hide')}
   /* hard snapping, one slide per swipe, only while the stage fills the screen: elsewhere (prologue, footer) the page scrolls freely */
-  document.documentElement.classList.toggle('snap-y',(!S.jump||S.jump.snapping)&&S.inStage&&r.bottom>=vh-4);
+  document.documentElement.classList.toggle('snap-y',S.inStage&&r.bottom>=vh-4);
   const pro=document.getElementById('pro');if(pro)pro.classList.toggle('tucked',S.tucked);
 }
 /* Scrolling is the browser's own. The page snaps one slide at a time only while the stage fills the screen (html.snap-y, set in

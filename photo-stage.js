@@ -165,7 +165,6 @@ function containFeed(state){
   const pro=document.getElementById('pro');if(pro)pro.inert=true;
   state.feed.prepend(state.header,state.bar);
   state.root.classList.add('ps-contained');
-  document.body.style.setProperty('--ps-page-y',-state.pageY+'px');
   document.body.classList.add('ps-viewing');
   document.documentElement.classList.add('ps-viewing');
   state.header.classList.remove('hide');
@@ -184,7 +183,6 @@ function releaseFeed(){
   const pro=document.getElementById('pro');if(pro)pro.inert=false;
   document.body.classList.remove('ps-viewing');
   document.documentElement.classList.remove('ps-viewing');
-  document.body.style.removeProperty('--ps-page-y');
   scrollTo({top:state.pageY,behavior:'instant'});
 }
 
@@ -239,14 +237,14 @@ function go(id,smooth){
     if(!shown()){finishJump(state);return}
     if(!jump.scrolled){
       jump.scrolled=true;
-      state.slides[i].scrollIntoView({behavior:'instant',block:'start',inline:'nearest'});
+      state.slides[i].scrollIntoView({behavior:smooth&&!state.reduce?'smooth':'instant',block:'start',inline:'nearest'});
       measure();
     }
     const max=Math.max(0,state.host.scrollHeight-innerHeight);
     const top=Math.max(0,Math.min(max,slideTop(i)));
     const landed=Math.abs(scrollY-top)<=2;
     jump.stable=landed?jump.stable+1:0;
-    if(now-jump.start>=1200){finishJump(state);return}
+    if(now-jump.start>=(smooth&&!state.reduce?3000:1200)){finishJump(state);return}
     if(!jump.activated&&jump.stable>=3&&now-jump.start>=180){
       // Only now replace neighbouring strips and update the category marker.
       // Keep observer ownership through a short post-activation landing check.

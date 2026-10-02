@@ -187,10 +187,10 @@ header.over-hero.hide::before{opacity:0}
 header.over-hero nav.links a,header.over-hero .theme-sw{text-shadow:none}
 header.over-hero{--paper:#EFEADF;--dim:rgba(239,234,223,.85);--gold:#EFEADF;--gold-hi:#E6D9B8;--line-2:rgba(239,234,223,.55);color:var(--paper)}
 /* light mode: the nav is a pale bar with dark type and the dark mark, everywhere except over the Home hero, Contact (night navy in either theme),
-   the Films feed and the open mobile menu. Work's stage tints the bar further down. */
-:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero){--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
-:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero)::before{background:var(--tint-l,rgba(244,240,231,.96));-webkit-backdrop-filter:none;backdrop-filter:none}
-:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero) .brand img{content:url(img/logo-dark.png)}
+   and the open mobile menu. Work's photo stage tints the bar further down. */
+:root[data-theme="light"]:not(.on-contact) body:not(.locked) header:not(.over-hero){--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
+:root[data-theme="light"]:not(.on-contact) body:not(.locked) header:not(.over-hero)::before{background:var(--header-ground,var(--tint-l,rgba(244,240,231,.96)));-webkit-backdrop-filter:none;backdrop-filter:none}
+:root[data-theme="light"]:not(.on-contact) body:not(.locked) header:not(.over-hero) .brand img{content:url(img/logo-dark.png)}
 .brand{display:block;line-height:0;position:relative;z-index:951}   /* stays above the open mobile menu */
 .brand img{height:clamp(30px,4.4vw,42px);width:auto;display:block;
   transition:opacity .4s var(--ease)}
@@ -907,12 +907,21 @@ html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8
 .ps-internal .ps-feed::-webkit-scrollbar{display:none}
 .ps-internal .ps-slide{scroll-margin-top:0}
 .ps-internal .ps-groundwrap{position:absolute;inset:0;height:auto;margin-bottom:0}
-html.ps-viewing{overflow:hidden;overscroll-behavior:none}
-body.ps-viewing{position:fixed;top:var(--ps-page-y);left:0;right:0;overflow:hidden}
+html.ps-viewing{--ps-surface:var(--tint,var(--ink));overflow:hidden;overscroll-behavior:none}
+:root[data-theme="light"].ps-viewing{--ps-surface:var(--tint-l,var(--ink))}
+/* Keep the overflow clip at the viewport edges, including in Safari.
+   The page position is saved in JS and restored when Photos releases it. */
+body.ps-viewing{position:fixed;inset:0;height:100dvh;overflow:hidden}
+/* Safari fills the area around its floating toolbar from the outer surface.
+   Paint that surface with the same ground as the photographs, not page navy. */
+html.ps-viewing,body.ps-viewing,.ps-contained{background:var(--ps-surface,var(--ink));transition:background-color .8s var(--quint)}
 body.ps-viewing footer{display:none}
 .ps-contained{position:fixed;inset:0;height:100dvh;z-index:900;animation:none}
 .ps-contained .ps-feed{position:absolute;inset:0;box-sizing:border-box;height:100%;padding-top:0;scroll-padding-top:calc(var(--hh,84px) + var(--psb));overscroll-behavior-y:contain}
-.ps-contained header{position:sticky;top:0}
+/* Safari samples the actual sticky header background for its top color.
+   Keep this base opaque and in step with the photograph ground. */
+.ps-contained header{position:sticky;top:0;background:var(--ps-surface,var(--ink));transition:transform .28s var(--ease),opacity .2s,background-color .8s var(--quint)}
+body.locked .ps-contained header{background:var(--ink)}
 .ps-contained .ps-bar{position:sticky;left:0;right:0}
 .ps-contained .ps-end{height:max(0px,calc(100dvh - var(--hh,84px) - var(--psb) - var(--ps-sh)))}
 .ps-head,.ps-foot{flex:0 0 auto;padding-inline:var(--pad)}
@@ -967,7 +976,7 @@ body.ps-viewing footer{display:none}
   .ul[data-on]{transition:none}
   .wk-tog a:active,.cl-b:active,.ps-arrows button:active,.pro-row:active .pro-n{transform:none}
   .ps .frame .fr-img:hover img{transform:none}
-  .ps-ground,.ps-bar,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
+  .ps-ground,.ps-bar,html.ps-viewing,body.ps-viewing,.ps-contained,.ps-contained header,html.on-work header::before{transition:none}   /* the colour still changes, without the 800ms ease */
 }
 /* a phone on its side: no peek, the whole stage is the slide, and the small print goes */
 @media (orientation:landscape) and (max-height:540px){
@@ -1044,6 +1053,9 @@ header{flex-wrap:wrap}
 .vf{--vfb:56px;--vf-cap:128px;--vf-h0:calc(100svh - var(--hh,84px));--vf-h:calc(var(--vf-h0) - var(--vfb));
   position:relative;height:var(--vf-h0);background:var(--ink);color:var(--paper);border-top:1px solid var(--line);
   scroll-snap-align:start;scroll-margin-top:var(--hh,84px)}
+/* Films navigation uses the page theme instead of a retained Photos tint. */
+body.vf-on{--header-ground:var(--ink)}
+body.vf-on:not(.locked) header{background:var(--header-ground)}
 body.vf-on footer{display:none}   /* Films ends at the last film: scrolling never pulls the footer into view */
 .vf-bar{position:absolute;top:0;left:0;right:0;height:var(--vfb);display:flex;align-items:center;gap:14px;
   padding:0;border-bottom:1px solid var(--line);background:var(--ink);z-index:2}

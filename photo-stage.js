@@ -168,14 +168,12 @@ function go(id,smooth){
   finishJump(state,false);
   clearTimeout(state.deb);
   if(!id&&!smooth){activate(i);onScroll();return}
-  const jump=state.jump={frame:0,start:performance.now(),stable:0,scrolled:false};
+  const jump=state.jump={frame:0,start:performance.now(),stable:0,scrolled:false,activated:false,activatedAt:0};
   if(state.io){state.io.disconnect();state.io.takeRecords()}
-  // Prepare the destination without changing the snap type or eligible targets.
-  // Element-directed scrolling lets the browser use this opener's snap position
-  // and its existing scroll-margin, rather than selecting from a pixel offset.
-  state.cand=i;activate(i);
-  void state.root.offsetHeight;
-  measure();
+  // Openers already exist. Keep the current strips intact until the native
+  // scroll has landed, so their replacement cannot re-snap the old destination
+  // before the browser has established the requested opener as its destination.
+  state.cand=i;
   const land=now=>{
     if(S!==state||state.jump!==jump)return;
     if(!shown()){finishJump(state);return}
@@ -188,11 +186,17 @@ function go(id,smooth){
     const top=Math.max(0,Math.min(max,slideTop(i)));
     const landed=Math.abs(scrollY-top)<=2;
     jump.stable=landed?jump.stable+1:0;
-    // Guard selection while the native operation settles; never issue a second
-    // scroll or change snap properties to chase an unexpected device landing.
-    if((jump.stable>=3&&now-jump.start>=180)||now-jump.start>=1200){
+    if(now-jump.start>=1200){finishJump(state);return}
+    if(!jump.activated&&jump.stable>=3&&now-jump.start>=180){
+      // Only now replace neighbouring strips and update the category marker.
+      // Keep observer ownership through a short post-activation landing check.
+      jump.activated=true;jump.activatedAt=now;jump.stable=0;
+      activate(i);measure();
+    }else if(jump.activated&&jump.stable>=3&&now-jump.activatedAt>=180){
       finishJump(state);return;
     }
+    // Unexpected landings are observed, never chased with another scroll or a
+    // snap-property change. Manual gestures still release ownership immediately.
     onScroll();jump.frame=requestAnimationFrame(land);
   };
   jump.frame=requestAnimationFrame(()=>{

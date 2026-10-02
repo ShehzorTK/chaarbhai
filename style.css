@@ -177,15 +177,20 @@ header::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:no
 header.solid::before{opacity:1}
 /* on paper the bar is always there, so the navy mark never sits on a photograph */
 :root[data-theme="light"] header:not(.over-hero)::before,:root[data-theme="light"] header.solid:not(.over-hero)::before{opacity:1}
-/* over the Home hero the nav is fully transparent in both themes, at the top and while scrolling through the hero; only text shadow keeps it readable */
-header.over-hero::before,header.over-hero.solid::before,:root[data-theme="light"] header.over-hero::before{opacity:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-header.over-hero nav.links a,header.over-hero .theme-sw{text-shadow:0 1px 10px rgba(18,20,28,.55)}
-:root[data-theme="light"] header.over-hero nav.links a{text-shadow:0 0 12px rgba(244,240,231,.85)}
+/* Over the hero, contrast belongs to one fading scrim, never to glowing labels.
+   It is part of the header, so hiding the header also removes the scrim. */
+header.over-hero::before,header.over-hero.solid::before,:root[data-theme="light"] header.over-hero::before{
+  opacity:1;bottom:-56px;box-shadow:none;
+  background:linear-gradient(to bottom,rgba(18,20,28,.84) 0%,rgba(18,20,28,.76) 52%,rgba(18,20,28,.38) 78%,transparent 100%);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+header.over-hero.hide::before{opacity:0}
+header.over-hero nav.links a,header.over-hero .theme-sw{text-shadow:none}
+header.over-hero{--paper:#EFEADF;--dim:rgba(239,234,223,.85);--gold:#EFEADF;--gold-hi:#E6D9B8;--line-2:rgba(239,234,223,.55);color:var(--paper)}
 /* light mode: the nav is a pale bar with dark type and the dark mark, everywhere except over the Home hero, Contact (night navy in either theme),
    the Films feed and the open mobile menu. Work's stage tints the bar further down. */
-:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header{--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
+:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero){--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42);color:var(--paper)}
 :root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero)::before{background:var(--tint-l,rgba(244,240,231,.96));-webkit-backdrop-filter:none;backdrop-filter:none}
-:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header .brand img{content:url(img/logo-dark.png)}   /* also over the Home hero */
+:root[data-theme="light"]:not(.on-contact) body:not(.locked):not(.vf-on) header:not(.over-hero) .brand img{content:url(img/logo-dark.png)}
 .brand{display:block;line-height:0;position:relative;z-index:951}   /* stays above the open mobile menu */
 .brand img{height:clamp(30px,4.4vw,42px);width:auto;display:block;
   transition:opacity .4s var(--ease)}

@@ -1701,6 +1701,7 @@ const TITLES={'/':'Chaar Bhai · Wedding Photography and Film','/portfolio':'Wor
 /* a chapter picked on Home: Work opens scrolled to it (set by data-then) */
 let jumpAfter=null;
 function render(path){
+  clearTimeout(navIdle);
   if(window.cbLog)cbLog('render '+path);
   VF.close();
   page.innerHTML=(P[path]||P['/'])();
@@ -1943,11 +1944,17 @@ function heroNav(){
   h.classList.toggle('over-hero',!!hero&&hero.getBoundingClientRect().bottom>h.offsetHeight);
 }
 addEventListener('resize',heroNav,{passive:true});
-let ly=0;
+let ly=0,navIdle=0;
 addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
   h.classList.toggle('solid',y>36);heroNav();
-  if(Math.abs(y-ly)<8)return;                  // trackpad and momentum jitter shouldn't flick the header in and out
-  h.classList.toggle('hide',y>ly&&y>330&&!navlinks.classList.contains('open')&&!document.body.classList.contains('vf-in'));ly=y;},{passive:true});
+  clearTimeout(navIdle);
+  const canHide=()=>scrollY>8&&!navlinks.classList.contains('open')&&!document.body.classList.contains('vf-in')&&!document.documentElement.classList.contains('cb-pen-hold');
+  if(Math.abs(y-ly)>=8){
+    h.classList.toggle('hide',y>ly&&canHide());ly=y;
+  }
+  if(y<=8)h.classList.remove('hide');
+  else navIdle=setTimeout(()=>{if(canHide())h.classList.add('hide')},1200);
+},{passive:true});
 
 /* ================= PRELOADER =================
    Waits for the logo and fonts.

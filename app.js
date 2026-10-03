@@ -124,7 +124,7 @@ const M_LOGO=`<svg class="pb-logo pb-meta" viewBox="0 0 24 24" aria-hidden="true
 const STAR_P='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
 const STARS=r=>`<span class="stars" role="img" aria-label="${r} out of 5 stars"><span class="stars-fill" style="width:${r/5*100}%">${STAR_P.repeat(5)}</span>${STAR_P.repeat(5)}</span>`;
 const revRating=r=>r.s?STARS(r.s):'<span class="rev-rec">Recommends</span>';
-const proof=(cls='')=>`<div class="proof ${cls}">
+const proof=(cls='',googleOnly=false)=>`<div class="proof ${cls}">
   <a class="pb pb-g" href="${PROOF.google.url}" target="_blank" rel="noopener" aria-label="Rated ${PROOF.google.rating} out of 5 from ${PROOF.google.count} reviews on Google. Read them on Google.">
     ${G_LOGO}
     <span class="pb-body">
@@ -132,7 +132,7 @@ const proof=(cls='')=>`<div class="proof ${cls}">
       <span class="pb-score"><b>${PROOF.google.rating.toFixed(1)}</b>${STARS(PROOF.google.rating)}</span>
       <span class="pb-sub">Based on ${PROOF.google.count} reviews</span>
     </span>
-  </a>
+  </a>${googleOnly?'':`
   <a class="pb pb-m" href="${PROOF.meta.url}" target="_blank" rel="noopener" aria-label="${PROOF.meta.recommend}% recommend, from ${PROOF.meta.count} reviews on Meta. Read them on Facebook.">
     ${M_LOGO}
     <span class="pb-body">
@@ -141,6 +141,7 @@ const proof=(cls='')=>`<div class="proof ${cls}">
       <span class="pb-sub">Based on ${PROOF.meta.count} reviews</span>
     </span>
   </a>
+`}
 </div>`;
 
 const ARROW=d=>`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d==='l'?'M13 8H3M7 4 3 8l4 4':'M3 8h10M9 4l4 4-4 4'}" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -302,15 +303,7 @@ P['/about']=()=>`
       <h2 class="d2 rv" data-d="1" style="max-width:18ch">Based in the Greater<br>Toronto Area, and we travel</h2>
       <p class="lead rv" data-d="2" style="margin-top:24px">The Greater Toronto Area is home, but a wedding somewhere else is not a problem. We have shot in Pakistan, the UAE, Thailand and the United States. Tell us where yours is and we’ll tell you whether we can be there.</p>
     </div>
-    <aside class="gcard rv" data-d="2" aria-label="Chaar Bhai on Google">
-      <div class="gcard-top">${G_LOGO}<div><b class="gcard-name">Chaar Bhai</b><span class="gcard-cat">Wedding photographer</span></div></div>
-      <div class="gcard-rate"><b>${PROOF.google.rating.toFixed(1)}</b>${STARS(PROOF.google.rating)}<span>${PROOF.google.count} Google reviews</span></div>
-      <ul class="gcard-list">
-        <li><span>Phone</span><a href="tel:+16475102444">+1 647-510-2444</a></li>
-        <li><span>Website</span><a href="https://chaarbhai.com" rel="noopener">chaarbhai.com</a></li>
-      </ul>
-      <a class="btn" href="${PROOF.google.url}" target="_blank" rel="noopener"><span>View on Google</span><i></i></a>
-    </aside>
+    ${proof('proof-s',true)}
   </div>
 </section>
 

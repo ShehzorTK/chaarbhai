@@ -1311,18 +1311,7 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 @media(max-width:900px) and (prefers-reduced-motion:no-preference){
   .day-panel,.day-end{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--gs-top,140px)}
 }
-/* About: Google listing card beside the Toronto text */
-.gta{display:grid;grid-template-columns:1fr minmax(280px,380px);gap:clamp(24px,5vw,80px);align-items:center}
-.gcard{display:flex;flex-direction:column;gap:18px;padding:22px;border:1px solid var(--line-2);border-radius:12px;background:color-mix(in srgb,var(--paper) 4%,transparent)}
-.gcard-top{display:flex;align-items:center;gap:14px}
-.gcard-name{display:block;font-family:var(--f-display);font-weight:400;font-size:var(--t-headline-s);line-height:1.1}
-.gcard-cat{display:block;color:var(--dim);font-size:.9rem;margin-top:2px}
-.gcard-rate{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-.gcard-rate b{font-weight:500;font-size:1.25rem}
-.gcard{--pb-star-off:var(--line-2)}
-.gcard-rate span:last-child{color:var(--dim);font-size:.9rem}
-.gcard-list{list-style:none;display:grid;gap:12px;font-size:.95rem}
-.gcard-list span{display:block;color:var(--dim);font-size:var(--t-label);letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px}
-.gcard-list a{color:inherit}
-.gcard .btn{align-self:flex-start}
-@media(max-width:900px){.gta{grid-template-columns:1fr}}
+/* About: Google rating badge beside the Toronto text */
+.gta{display:grid;grid-template-columns:1fr auto;gap:clamp(24px,5vw,80px);align-items:center}
+.gta .proof{margin-top:0}
+@media(max-width:900px){.gta{grid-template-columns:1fr}.gta .proof{margin-top:8px}}

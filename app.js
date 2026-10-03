@@ -1,6 +1,28 @@
-/* Homepage reel: a YouTube video id, and the stretch of it that loops
-   (seconds). 6 skips the title card; 60 seconds of footage from there. */
-const REEL='NjDgSJSYF78', REEL_FROM=6, REEL_TO=66;
+/* Preload the same native player during the initial site loader, before Home mounts. */
+const HERO_SRC=matchMedia('(max-width:700px)').matches?'media/hero-v40-51-720.mp4':'media/hero-v40-51-1080.mp4';
+const heroVideo=document.createElement('video');
+heroVideo.id='hero-video';heroVideo.className='vhero-video';
+heroVideo.muted=true;heroVideo.defaultMuted=true;heroVideo.loop=true;heroVideo.playsInline=true;
+heroVideo.setAttribute('muted','');heroVideo.setAttribute('playsinline','');
+heroVideo.preload='auto';heroVideo.poster='media/hero-v40-51-poster.webp';
+heroVideo.setAttribute('aria-hidden','true');
+let heroController=null,heroDownload=null,heroDownloaded=false;
+function preloadHero(){
+  if(heroDownload)return heroDownload;
+  heroDownload=new Promise((resolve,reject)=>{
+    const request=new XMLHttpRequest();request.open('GET',HERO_SRC);request.responseType='blob';
+    request.onload=()=>request.status>=200&&request.status<300?resolve(request.response):reject(new Error('Hero download failed'));
+    request.onerror=()=>reject(new Error('Hero download failed: '+request.status+' '+request.responseURL));request.send();
+  }).then(blob=>{
+    heroDownloaded=true;heroVideo.src=URL.createObjectURL(blob);heroVideo.load();
+   }).catch(()=>{
+    // Embedded browsers may reject Blob downloads; warm the native source under the cover instead.
+    heroVideo.src=HERO_SRC;heroVideo.load();
+    heroVideo.addEventListener('canplay',()=>{if(heroController&&heroVideo.isConnected){heroVideo.muted=true;heroVideo.play().catch(()=>{});}},{once:true});
+  });
+  return heroDownload;
+}
+if(!location.hash||location.hash==='#/')preloadHero();
 
 const T=['#191C26','#1D2030','#232735','#1B1E29','#202431','#262A38'];   /* image-failed fallbacks, from the ink ramp */
 /* One photo from PORTFOLIO or PICKS: web-sized WebP copies in site/photos.
@@ -136,10 +158,12 @@ const P={};
 P['/']=()=>`
 <section class="vhero">
   <div class="vhero-media">
-    <!-- The pen mark stands in until YouTube actually plays (or 7 seconds pass). Reduced
-         motion keeps the completed logo. -->
+    <!-- The pen mark waits for the fully downloaded native loop. -->
     <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
+    <div class="cb-video-cover" aria-hidden="true"></div>
     <div class="vhero-player"><div id="reel"></div></div>
+    <button class="hero-sound mono" type="button" aria-label="Unmute background music" aria-pressed="false" hidden>Sound off</button>
+    <button class="hero-play mono" type="button" hidden>Play film</button>
   </div>
   <div class="vhero-in">
     <h1>
@@ -1427,22 +1451,6 @@ function pricing(){
     sync();
 }
 /* auto sizing inline letter fields */
-/* Home reel. Loads YouTube's player API once, builds the player into #reel,
-   and removes the themed cover only after it is really playing.
-   Loops by restarting at the end. */
-let ytReady=null;
-function loadYT(){
-  if(ytReady)return ytReady;
-  ytReady=new Promise(res=>{
-    if(window.YT&&YT.Player)return res();
-    const prev=window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady=()=>{if(prev)prev();res()};
-    const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;
-    s.onerror=()=>{ytReady=null};document.head.appendChild(s);
-  });
-  return ytReady;
-}
-if(!/^#\/[^?]/.test(location.hash)&&location.protocol!=='file:')loadYT();   // Home: start fetching YouTube's player API now, it can be slow
 /* Home intro: penRelease() lets the site (header, hero copy, labels) fade in around the drawing, penUnlock() ends the intro. */
 function penRelease(){document.documentElement.classList.remove('cb-pen-hold')}   // the site starts coming up, piece by piece (CSS delays)
 function penUnlock(){                                                             // the drawing is done: scrolling and the normal header behaviour are back
@@ -1464,7 +1472,6 @@ function homeLogo(placeholder,firstVisit,reveal){
   let started=0,progress=0,skipOff=null;
   const SITE_AT=500;     // the site starts coming up this long after the pen starts drawing
   const DRAW=3200;       // the full drawing always plays, whatever is cached or already playing
-  const MAX_WAIT=7000;   // after the drawing: how long the finished mark waits in place for the video   // safety: if the video has not started by now (Low Power Mode, a blocked autoplay), the logo lands anyway and the video underneath is revealed
   const size=()=>hero.style.setProperty('--cb-hero-copy',copy.offsetHeight+'px');
   size();const sizing=new ResizeObserver(size);heroSizing=sizing;
   // Measured once behind the ready gate; the observer only runs once the intro is over, so the pen never moves while it draws.
@@ -1514,7 +1521,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   });
   const settle=()=>{
     if(disposed||settling||!placeholder.isConnected)return;
-    settling=true;if(!pen)reveal();if(skipOff)skipOff();   // with the pen the video is revealed by fly(), once the mark is moving
+    settling=true;if(skipOff)skipOff();   // with the pen the video is revealed by fly(), once the mark is moving
     cancelAnimationFrame(frame);
     if(!firstVisit){            // coming from another page: the waiting mark settles, then travels to the header like the first time
       calm().then(fly);
@@ -1534,7 +1541,7 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
   const ready=preGone.then(async()=>{
     if(disposed||!placeholder.isConnected)return;
-    if(!firstVisit||reduceMotion()){unlock();if(played)settle();else{if(!reduceMotion())placeholder.classList.add('cb-pulse');setTimeout(()=>{if(!disposed)settle()},MAX_WAIT)}return;}   // from another page: the mark pulses softly until the video plays
+    if(!firstVisit||reduceMotion()){unlock();if(played)settle();else{if(!reduceMotion())placeholder.classList.add('cb-pulse');/* Ready event ends the pulse; no timer uncovers an unready film. */}return;}   // from another page: the mark pulses softly until the video plays
     // One ready gate: fonts and pen images together (1.5s at most), then measure the headline once and start.
     const imgs=['img/pen-loader-1.png','img/pen-loader-3.png','img/pen-loader-4.png'].map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u}));
     await Promise.race([Promise.all([window.CB_FONTS||0,document.fonts&&document.fonts.ready,...imgs]),new Promise(r=>setTimeout(r,1500))]);
@@ -1551,14 +1558,14 @@ function homeLogo(placeholder,firstVisit,reveal){
       stopSkip();
       document.documentElement.classList.add('cb-pen-skip');
       unlock();
-      if(!disposed)settle();
+      if(!disposed&&played)settle();else placeholder.classList.add('cb-pulse');
     };
     const SKIP_EVENTS=['pointerdown','wheel','touchmove','keydown'];
     const stopSkip=()=>SKIP_EVENTS.forEach(ev=>removeEventListener(ev,skip));
     SKIP_EVENTS.forEach(ev=>addEventListener(ev,skip,{passive:true}));
     skipOff=stopSkip;
     // The mark never moves while it draws. After the full drawing it waits where it is (gently pulsing) until the video plays,
-    // up to MAX_WAIT, then lands in the header while the video fades in.
+    // the complete native file must be ready before the mark lands.
     const draw=now=>{
       if(disposed||settling)return;
       const t=now-started;
@@ -1567,7 +1574,7 @@ function homeLogo(placeholder,firstVisit,reveal){
       progress=e;pen.seek(progress*pen.drawEnd);
       if(p<1){frame=requestAnimationFrame(draw);return}
       unlock();
-      if(played||t>=DRAW+MAX_WAIT){calm().then(settle);return}   // no animation frames from here: calm() then settle()
+      if(played){calm().then(settle);return}   // no animation frames from here: calm() then settle()
       placeholder.classList.add('cb-pulse');
       frame=requestAnimationFrame(draw);
     };
@@ -1584,48 +1591,53 @@ function homeLogo(placeholder,firstVisit,reveal){
   };
 }
 function reel(){
+  if(heroController){heroController.dispose();heroController=null;}
   if(heroLogo){heroLogo.dispose();heroLogo=null;}
   const el=document.getElementById('reel');if(!el)return;
-  const playerShell=el.closest('.vhero-player'),placeholder=playerShell.parentNode.querySelector('.cb-hero-placeholder');
-  // shows the video: called when the video plays or when the logo lands after its safety timeout, whichever comes first
-  let revealed=false,shown=false;
-  const reveal=()=>{revealed=true;if(!shown)return;const f=playerShell.querySelector('iframe');if(f)f.classList.add('on');playerShell.classList.add('is-playing')};
-  heroLogo=homeLogo(placeholder,firstHeroVisit(),reveal);const logo=heroLogo;
-  if(reduceMotion())return;
-  // YouTube won't play embeds on a page opened straight from disk (file://):
-  // it needs a real web address to check where it's embedded. The poster
-  // logo stands in; the reel plays once the site is served (Netlify, or a
-  // local server) rather than double-clicked.
-  if(location.protocol==='file:'){console.info('Chaar Bhai: the home reel only plays when the site is served over http(s), not opened as a file.');return}
-  loadYT().then(()=>{
-    if(!document.body.contains(el))return;          // left the home page meanwhile
-    // Plain YouTube autoplay (autoplay=1, mute=1, start/end in the URL) and no retry loop: browsers either start it or they
-    // don't, and a script poking it every second made Safari cycle between a spinner and a play button. The iframe sits
-    // at opacity 0 with nothing over it. The pen logo is a separate overlay that never blocks it.
-    const p=new YT.Player(el,{
-      videoId:REEL,
-      playerVars:{origin:location.origin,autoplay:1,mute:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,disablekb:1,fs:0,modestbranding:1,start:REEL_FROM,end:REEL_TO},
-      events:{
-        onReady:e=>{const f=e.target.getIframe();f.classList.add('vhero-yt');if(revealed&&shown)f.classList.add('on');f.tabIndex=-1;f.setAttribute('aria-hidden','true');
-          f.title='Chaar Bhai wedding film reel';
-          // keep playback inside REEL_FROM..REEL_TO: jump back just before the end
-          const loop=setInterval(()=>{if(!document.body.contains(f))return clearInterval(loop);
-            const t=e.target.getCurrentTime&&e.target.getCurrentTime();
-            if(t>=REEL_TO-.25||(t>0&&t<REEL_FROM-.5))e.target.seekTo(REEL_FROM,true)},250)},
-        onStateChange:e=>{
-          if(e.data===YT.PlayerState.PLAYING&&!shown&&playerShell.isConnected){
-            shown=true;if(revealed||!logo.holdsReveal)reveal();
-            logo.playing();
-          }
-          if(e.data===YT.PlayerState.ENDED){e.target.seekTo(REEL_FROM,true);e.target.playVideo()}
-        },
-        onError:()=>{const f=p.getIframe&&p.getIframe();if(f)f.remove()}   // any player error: keep the logo, never YouTube's error screen
-      }
-    });
-    // Where autoplay is refused (iPhone Low Power Mode), the first tap or key press is a real gesture: start it once then, no retry loop
-    const kick=()=>{if(!shown&&p&&p.playVideo)try{p.playVideo()}catch(e){}};
-    document.addEventListener('pointerdown',kick,{once:true,passive:true});document.addEventListener('keydown',kick,{once:true,passive:true});
+  const hero=el.closest('.vhero'),placeholder=hero.querySelector('.cb-hero-placeholder');
+  const sound=hero.querySelector('.hero-sound'),playButton=hero.querySelector('.hero-play');
+  const video=heroVideo;video.pause();video.muted=true;video.defaultMuted=true;
+  el.replaceWith(video);
+  preloadHero();
+  let disposed=false,ready=false,landed=false,started=false;
+  const listeners=[];
+  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
+  const mute=()=>{video.muted=true;sound.textContent='Sound off';sound.setAttribute('aria-pressed','false');sound.setAttribute('aria-label','Unmute background music');};
+  const visible=()=>{const r=hero.getBoundingClientRect();return document.visibilityState==='visible'&&r.top>=-80&&r.bottom>innerHeight*.5;};
+  const reveal=()=>{if(started)return;started=true;hero.classList.add('is-reel-ready');hero.querySelector('.cb-video-cover')?.remove();sound.hidden=false;};
+  const play=async()=>{
+    if(disposed||!landed||!visible())return;
+    try{await video.play();if(disposed||!visible()){video.pause();mute();return;}reveal();playButton.hidden=true;}
+    catch(e){if(!disposed){reveal();playButton.hidden=false;}}
+  };
+  const pause=()=>{video.pause();mute();};
+  const sync=()=>{if(!visible())pause();else if(landed&&video.paused){mute();if(!reduceMotion())play();}};
+  const buffered=()=>{if(heroDownloaded)return true;if(video.readyState<3)return false;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<.1&&video.buffered.end(i)>=video.duration-.1)return true;return false;};
+  const logo=heroLogo=homeLogo(placeholder,firstHeroVisit(),()=>{
+    if(disposed||!ready)return;landed=true;mute();
+    if(reduceMotion()){reveal();playButton.hidden=false;}else play();
   });
+  const prepare=()=>{
+    if(disposed||ready||video.readyState<3||!buffered())return;
+    ready=true;video.pause();video.currentTime=0;logo.playing();
+  };
+  listen(video,'progress',prepare);listen(video,'canplaythrough',prepare);listen(video,'loadeddata',prepare);
+  listen(sound,'click',()=>{
+    if(!landed||!visible())return;
+    video.muted=!video.muted;
+    sound.textContent=video.muted?'Sound off':'Sound on';
+    sound.setAttribute('aria-pressed',String(!video.muted));
+    sound.setAttribute('aria-label',video.muted?'Unmute background music':'Mute background music');
+    play();
+  });
+  listen(playButton,'click',()=>{mute();if(video.error){heroDownload=null;heroDownloaded=false;preloadHero();}else play();});
+  listen(window,'scroll',sync);listen(window,'resize',sync);
+  listen(window,'hashchange',()=>{pause();});
+  listen(document,'visibilitychange',sync);listen(window,'pagehide',pause);listen(window,'pageshow',sync);
+  listen(video,'error',()=>{pause();playButton.hidden=false;playButton.textContent='Retry film';});
+  // Keep downloading the complete short loop before uncovering it: no network fetch at its seam.
+  const poll=setInterval(prepare,200);prepare();
+  heroController={dispose(){disposed=true;clearInterval(poll);listeners.forEach(fn=>fn());pause();video.remove();}};
 }
 
 /* Studio Ninja's form, loaded once per visit. snLoad() runs as soon as the

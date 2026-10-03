@@ -1,25 +1,17 @@
 /* Preload the same native player during the initial site loader, before Home mounts. */
-const HERO_SRC=matchMedia('(max-width:700px)').matches?'media/hero-v40-52-720.mp4':'media/hero-v40-52-1080.mp4';
+const HERO_SRC=matchMedia('(max-width:700px)').matches?'media/hero-v40-54-720.mp4':'media/hero-v40-54-1080.mp4';
 const heroVideo=document.createElement('video');
 heroVideo.id='hero-video';heroVideo.className='vhero-video';
 heroVideo.muted=true;heroVideo.defaultMuted=true;heroVideo.loop=true;heroVideo.playsInline=true;
 heroVideo.setAttribute('muted','');heroVideo.setAttribute('playsinline','');
-heroVideo.preload='auto';heroVideo.poster='media/hero-v40-52-poster.webp';
+heroVideo.preload='auto';heroVideo.poster='media/hero-v40-54-poster.webp';
 heroVideo.setAttribute('aria-hidden','true');
-let heroController=null,heroDownload=null,heroDownloaded=false;
+let heroController=null,heroDownload=null;
 function preloadHero(){
   if(heroDownload)return heroDownload;
-  heroDownload=new Promise((resolve,reject)=>{
-    const request=new XMLHttpRequest();request.open('GET',HERO_SRC);request.responseType='blob';
-    request.onload=()=>request.status>=200&&request.status<300?resolve(request.response):reject(new Error('Hero download failed'));
-    request.onerror=()=>reject(new Error('Hero download failed: '+request.status+' '+request.responseURL));request.send();
-  }).then(blob=>{
-    heroDownloaded=true;heroVideo.src=URL.createObjectURL(blob);heroVideo.load();
-   }).catch(()=>{
-    // Embedded browsers may reject Blob downloads; warm the native source under the cover instead.
-    heroVideo.src=HERO_SRC;heroVideo.load();
-    heroVideo.addEventListener('canplay',()=>{if(heroController&&heroVideo.isConnected){heroVideo.muted=true;heroVideo.play().catch(()=>{});}},{once:true});
-  });
+  // Faststart MP4s can play while the rest downloads; keep one native player.
+  heroVideo.src=HERO_SRC;heroVideo.load();
+  heroDownload=Promise.resolve();
   return heroDownload;
 }
 if(!location.hash||location.hash==='#/')preloadHero();
@@ -1618,7 +1610,7 @@ function reel(){
   };
   const pause=()=>{video.pause();mute();};
   const sync=()=>{if(!visible())pause();else if(landed&&video.paused&&!userPaused){mute();if(!reduceMotion())play();}};
-  const buffered=()=>{if(heroDownloaded)return true;if(video.readyState<3)return false;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<.1&&video.buffered.end(i)>=video.duration-.1)return true;return false;};
+  const buffered=()=>{if(video.readyState<3)return false;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<.1&&video.buffered.end(i)>=Math.min(2,video.duration))return true;return false;};
   const logo=heroLogo=homeLogo(placeholder,firstHeroVisit(),()=>{
     if(disposed||!ready)return;landed=true;mute();
     if(reduceMotion()){manualPlayback=true;reveal();updatePlayback();}else play();
@@ -1634,14 +1626,14 @@ function reel(){
     updateSound();
     play();
   });
-  listen(playButton,'click',()=>{if(!video.paused&&!video.error){userPaused=true;pause();return;}userPaused=false;mute();if(video.error){heroDownload=null;heroDownloaded=false;preloadHero();}else play();});
+  listen(playButton,'click',()=>{if(!video.paused&&!video.error){userPaused=true;pause();return;}userPaused=false;mute();if(video.error){heroDownload=null;preloadHero().then(play);}else play();});
   listen(video,'play',updatePlayback);listen(video,'pause',updatePlayback);
   listen(video,'playing',()=>{if(landed&&visible())reveal();});
   listen(window,'scroll',sync);listen(window,'resize',sync);
   listen(window,'hashchange',()=>{pause();});
   listen(document,'visibilitychange',sync);listen(window,'pagehide',pause);listen(window,'pageshow',sync);
   listen(video,'error',()=>{manualPlayback=true;pause();updatePlayback();});
-  // Keep downloading the complete short loop before uncovering it: no network fetch at its seam.
+  // Keep the film covered until a playable opening is buffered; the native player downloads ahead.
   const poll=setInterval(prepare,200);prepare();
   heroController={dispose(){disposed=true;clearInterval(poll);listeners.forEach(fn=>fn());pause();video.remove();}};
 }

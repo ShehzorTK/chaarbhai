@@ -302,11 +302,7 @@ P['/about']=()=>`
       <h2 class="d2 rv" data-d="1" style="max-width:18ch">Based in the Greater<br>Toronto Area, and we travel</h2>
       <p class="lead rv" data-d="2" style="margin-top:24px">The Greater Toronto Area is home, but a wedding somewhere else is not a problem. We have shot in Pakistan, the UAE, Thailand and the United States. Tell us where yours is and we’ll tell you whether we can be there.</p>
     </div>
-    <a class="gsq" href="${PROOF.google.url}" target="_blank" rel="noopener" aria-label="Rated ${PROOF.google.rating} out of 5 from ${PROOF.google.count} reviews on Google. Read them on Google.">
-      <span class="gsq-top">${G_LOGO}<span>Google Reviews</span></span>
-      <span class="gsq-mid"><b>${PROOF.google.rating.toFixed(1)}</b>${STARS(PROOF.google.rating)}<span>Based on ${PROOF.google.count} reviews</span></span>
-      <span class="gsq-foot"><span>Read them on Google</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </a>
+    ${CANADA_MAP}
   </div>
 </section>
 
@@ -735,7 +731,7 @@ themeSw.addEventListener('click',()=>{
 /* clicks worth counting: review badges, the hiring email, social links */
 document.addEventListener('click',e=>{
   const a=e.target.closest('a');if(!a)return;
-  if(a.classList.contains('pb')||a.classList.contains('gsq'))track('review_badge_click',{platform:a.classList.contains('pb-g')||a.classList.contains('gsq')?'google':'meta'});
+  if(a.classList.contains('pb'))track('review_badge_click',{platform:a.classList.contains('pb-g')?'google':'meta'});
   else if(a.href.startsWith('mailto:')&&a.closest('.hire'))track('hiring_email_click');
   else if(/instagram\.com|youtube\.com|tiktok\.com|linkedin\.com/.test(a.href))track('social_click',{network:(a.href.match(/(instagram|youtube|tiktok|linkedin)/)||[])[1]});
 });

@@ -261,15 +261,14 @@ P['/about']=()=>`
   <div class="hero-foot mono"><span>Since 2013</span><span>Photo and film</span><span>We travel</span></div>
 </section>
 
-<section class="st-reveal">
-  <p class="quote statement st-p" aria-label="When your brothers are at the wedding, you don’t worry. They’ve got it covered.">${['When your brothers','are at the wedding,','you don’t worry.','They’ve got it covered.'].map(l=>`<span class="st-line" aria-hidden="true"><span>${l}</span></span>`).join('')}</p>
-</section>
-
-<section style="padding-top:0">
-  <div style="max-width:62ch">
-    <p class="lead rv" data-d="1">That’s the name, in Urdu. We started in 2013 as four friends, and life has since taken the four of us to different parts of the world. The name stayed, because of what it came to mean.</p>
-    <p class="lead rv" data-d="2" style="margin-top:20px">What we’ve learnt, and what our couples tell us they expect, is that feeling: the comfort of knowing Chaar Bhai have it covered, so the family can get on with the day.</p>
-    <p class="lead rv" data-d="3" style="margin-top:20px">It’s why our clients so often span three generations of one family. Somewhere along the way we stop being the people with the cameras and become family.</p>
+<section class="ab-story">
+  <div class="ab-grid">
+    <h2 class="d2 ab-head" aria-label="When your brothers are at the wedding, you don’t worry. They’ve got it covered.">${['When your brothers are at the wedding,','you don’t worry.','They’ve got it covered.'].map(l=>`<span class="ab-l" aria-hidden="true">${l}</span>`).join(' ')}</h2>
+    <div class="ab-paras">
+      <p class="lead rv" data-d="1">Chaar Bhai is Urdu for four brothers. We started in 2013 as four friends, and life has since taken the four of us to different parts of the world. The name stayed, because of what it came to mean.</p>
+      <p class="lead rv" data-d="1">What we’ve learnt, and what our couples tell us they expect, is that feeling: the comfort of knowing Chaar Bhai have it covered, so the family can get on with the day.</p>
+      <p class="lead rv" data-d="1">It’s why our clients so often span three generations of one family. Somewhere along the way we stop being the people with the cameras and become family.</p>
+    </div>
   </div>
 </section>
 
@@ -2120,9 +2119,8 @@ function paintHomeScenes(){
   const clamp=v=>Math.max(0,Math.min(1,v)),reduce=reduceMotion();
   const plan=document.querySelector('.plan');
   if(plan){const r=plan.getBoundingClientRect(),words=[...plan.querySelectorAll('.plan-word')],p=reduce?1:clamp((innerHeight*.8-r.top)/Math.max(1,r.height+innerHeight*.2));words.forEach((w,i)=>w.classList.toggle('read',p*words.length>=i+1));}
-  const st=document.querySelector('.st-reveal');
-  if(st){const r=st.getBoundingClientRect(),lines=[...st.querySelectorAll('.st-line')],n=lines.length,a=innerHeight*.85,b=(innerHeight-r.height)/2,p=reduce?1:clamp((a-r.top)/Math.max(1,a-b));
-    lines.forEach((l,i)=>{const t=clamp((p-i/(n+1))/(2/(n+1))),e=1-Math.pow(1-t,3);l.style.setProperty('--lp',e.toFixed(3))});}
+  const ab=document.querySelector('.ab-story');
+  if(ab){const ps=[...ab.querySelectorAll('.ab-paras p')],ls=[...ab.querySelectorAll('.ab-l')];ps.forEach((q,i)=>ls[i]&&ls[i].classList.toggle('lit',reduce||q.getBoundingClientRect().top<=innerHeight*.55));}
   const day=document.querySelector('.day');if(!day)return;
   const track=day.querySelector('.day-track'),pin=day.querySelector('.day-pin'),panels=[...day.querySelectorAll('.day-panel')];
   const desktop=innerWidth>900&&!reduce,max=Math.max(0,track.scrollWidth-track.clientWidth);

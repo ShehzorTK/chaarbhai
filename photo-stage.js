@@ -298,10 +298,14 @@ function onScroll(){if(S&&!S.tick){S.tick=1;requestAnimationFrame(measure)}}
 function observe(){
   if(S.io)S.io.disconnect();
   const top=S.internal&&!S.contained?0:headH()+S.bar.offsetHeight;
-  const state=S;
+  const state=S,visibleSlides=new Set();
   const observer=new IntersectionObserver(es=>{
     if(S!==state||state.io!==observer||state.jump)return;
-    es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=0.6)S.cand=+e.target.dataset.i});
+    // Choose from current geometry rather than stale observer entry order.
+    const edge=headH()+state.bar.offsetHeight;
+    es.forEach(e=>{if(e.isIntersecting)visibleSlides.add(e.target);else visibleSlides.delete(e.target);});
+    const candidates=[...visibleSlides].map(el=>({i:+el.dataset.i,r:el.getBoundingClientRect()})).filter(x=>x.r.bottom>edge&&x.r.top<innerHeight);
+    if(candidates.length)state.cand=candidates.reduce((a,b)=>Math.abs(b.r.top-edge)<Math.abs(a.r.top-edge)?b:a).i;
     clearTimeout(S.deb);
     S.deb=setTimeout(()=>{if(S===state&&!state.jump&&state.cand>=0)activate(state.cand)},90);     // not while a fling is still going past
   },{root:S.internal?S.feed:null,rootMargin:'-'+top+'px 0px 0px 0px',threshold:[0.6]});
@@ -328,7 +332,8 @@ function mount(then){
   document.addEventListener('keydown',onKey);
   observe();
   const jump=b=>{if(S&&S.root===root&&b)go(S.data[+b.dataset.first].c.id,true)};
-  root.addEventListener('click',e=>jump(e.target.closest('.cl-b')));
+  let touchJumpAt=0;
+  root.addEventListener('click',e=>{if(performance.now()-touchJumpAt>500)jump(e.target.closest('.cl-b'));});
   // iPhone Safari can suppress click after a scroll. Handle a stationary touch explicitly,
   // while leaving sideways category swipes and vertical page scrolling to the browser.
   let tap=null;
@@ -344,7 +349,7 @@ function mount(then){
     const start=tap;tap=null;const t=e.changedTouches[0];
     if(!start||!t||e.touches.length||Math.hypot(t.clientX-start.x,t.clientY-start.y)>8||e.target.closest('.cl-b')!==start.b)return;
     if(e.cancelable)e.preventDefault();
-    jump(start.b);
+    touchJumpAt=performance.now();jump(start.b);
   },{passive:false});
   S.bar.addEventListener('touchcancel',()=>{tap=null},{passive:true});
   /* the contents list is the way in: open the stage on that chapter */

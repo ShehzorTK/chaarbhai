@@ -1218,11 +1218,8 @@ header.cb-logo-landing{transition:none;transform:none;opacity:1;pointer-events:a
 header .brand img.cb-brand-in-flight{visibility:hidden}
 
 /* The hero follows the selected theme, including the waiting mark and copy. */
-:root[data-theme="light"] .vhero{--ink:#F4F0E7;--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-hi:#57492D;color:var(--paper)}
 .vhero .vhero-media{background:var(--ink)}
-:root[data-theme="light"] .vhero-media::after{background:linear-gradient(to top,rgba(244,240,231,.58) 0,rgba(244,240,231,.34) 30%,transparent 58%)}   /* a soft pale shade under the copy only */
 /* Preserve every original logo colour; contrast comes from a small shadow. */
-:root[data-theme="light"] .vhero .cb-hero-placeholder>img{content:url(img/logo-dark.png)}   /* light mode: the dark mark, maple leaf still red */
 .cb-logo-flight img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 :root[data-theme="light"]:not(.on-contact) footer .credit-logo{filter:brightness(0);opacity:.6}   /* the white credit mark turns dark on the paper footer */
 /* Native hero: one fully buffered film, no iframe or restart timer. */
@@ -1238,3 +1235,53 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 @media(prefers-reduced-motion:reduce){.cb-hero-placeholder.is-waiting>img{animation:none}}
 
 .cb-video-cover{position:absolute;inset:0;z-index:1;background:var(--ink);pointer-events:none}
+
+/* The approved hero is a fixed dark room, independent of the page theme. */
+.vhero{color-scheme:dark;--line:rgba(239,234,223,.14);--line-2:rgba(239,234,223,.28);--gline:rgba(206,192,163,.42);--gold-wash:rgba(206,192,163,.08)}
+.hero-sound{background:transparent;border:0}
+.hero-unmute-prompt{position:absolute;z-index:4;right:calc(var(--pad) + 54px);top:calc(var(--hh,88px) + 38px);font-size:12px;line-height:16px;color:var(--paper);text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none}
+.hero-unmute-prompt[hidden]{display:none}
+/* Work retains its existing theme and story-tint navigation rules above. */
+.plan{min-height:80svh;display:flex;align-items:center}
+.plan .band-in{width:100%}
+.plan p.lead{font-family:var(--f-serif);font-size:clamp(22px,2.05vw,31px);line-height:1.38;letter-spacing:-.005em;color:var(--paper);max-width:30ch}
+.plan-word{color:var(--dim);transition:color 180ms linear}
+.plan-word.read{color:var(--paper)}
+.day{position:relative;overflow:clip}
+.day-pin{padding-top:calc(var(--hh,88px) + 20px);padding-bottom:30px}
+.day-sky{position:relative;height:1px;background:var(--line-2);margin:0 0 40px}
+.day-hours{display:flex;justify-content:space-between;list-style:none;position:absolute;left:0;right:0;top:-20px}
+.day-hours li{font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.day-hours li.on{color:var(--gold)}
+.day-sun{position:absolute;top:-4px;left:0;width:9px;height:9px;border-radius:50%;background:var(--gold);transform:translateX(-50%)}
+.day-track{display:flex;gap:clamp(24px,3vw,48px)}
+.day-panel{flex:0 0 min(78vw,1100px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,3vw,48px);align-items:center}
+.day-ph{aspect-ratio:4/5;max-height:52svh;margin:0 auto;overflow:hidden}
+.day-tx .mono:first-child{color:var(--gold)}
+.day-tx h3{font-family:var(--f-display);font-weight:400;font-size:var(--t-headline-s);line-height:1.1;letter-spacing:-.015em;margin:10px 0 8px}
+.day-tx p.mono{color:var(--dim);margin-bottom:14px}
+.day-tx p.lead{margin-bottom:22px}
+@media(min-width:901px) and (prefers-reduced-motion:no-preference){.day-pin{position:sticky;top:0}}
+@media(max-width:900px),(prefers-reduced-motion:reduce){
+  .plan{min-height:0}
+  .day-track{display:block}
+  .day-panel{display:block;margin-bottom:clamp(40px,8vw,70px)}
+  .day-ph{max-height:none;margin-bottom:20px}
+  .day-sky{position:sticky;top:var(--hh,88px);z-index:5;height:auto;background:var(--day-ground,var(--ink));padding:14px 0 12px;border-bottom:1px solid var(--line-2)}
+  .day-hours{position:static}.day-hours li:not(.on){display:none}.day-sun{top:auto;bottom:-5px}
+}
+@media(prefers-reduced-motion:reduce){.plan-word{transition:none}}
+
+/* Chapter indicators are local navigation, including on a phone. */
+.day-hours a{display:flex;align-items:center;min-height:44px;color:inherit;text-decoration:none;touch-action:manipulation}
+.day-hours{top:-32px}
+.day-hours a:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+@media(hover:hover) and (pointer:fine){.day-hours a:hover{color:var(--gold)}}
+@media(max-width:900px),(prefers-reduced-motion:reduce){
+  .day-sky{padding:0;border-bottom:1px solid var(--line-2)}
+  .day-hours{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
+  .day-hours li:not(.on){display:block}
+  .day-hours li{flex:0 0 auto}
+  .day-hours a{min-height:44px;white-space:nowrap}
+  .day-hours::-webkit-scrollbar{display:none}
+}

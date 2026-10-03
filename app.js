@@ -107,6 +107,7 @@ const PR_CHECK='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.6 6.4 
 const svcAttr=v=>v?` data-service="${v}"`:'';
 /* estimate chosen on the Prices page, carried into the contact letter */
 let EST=null;
+let homeSceneFrame=0;
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* Ratings shown on the site, with links to the full lists. The figures are
@@ -159,6 +160,7 @@ P['/']=()=>`
     <div class="cb-video-cover" aria-hidden="true"></div>
     <div class="vhero-player"><div id="reel"></div></div>
     <button class="hero-sound mono" type="button" aria-label="Unmute background music" aria-pressed="false" hidden>${HERO_SOUND_ICON(true)}</button>
+    <span class="hero-unmute-prompt" hidden>Press here to unmute</span>
     <button class="hero-play mono" type="button" aria-label="Play film" hidden>${HERO_PLAY_ICON(true)}</button>
   </div>
   <div class="vhero-in">
@@ -177,7 +179,7 @@ P['/']=()=>`
   </div>
 </section>
 
-<section>
+<section class="plan">
   <div class="band-in" style="align-items:start">
     <div>
       <h2 class="d2 rv" data-d="1">We plan the<br>boring parts</h2>
@@ -185,22 +187,24 @@ P['/']=()=>`
     <div>
       <p class="lead rv" data-d="2">We sit down with you before the day and go through it properly. Which events matter most, who has to be in the family photos, what you want us nowhere near.</p>
       <p class="lead rv" data-d="3" style="margin-top:20px">It’s not the interesting part of the job. It’s the reason things don’t get missed.</p>
-      <div class="rv" data-d="3" style="margin-top:34px"><a href="#/about" data-nav class="btn"><span>More about us</span><i></i></a></div>
+      <div class="rv plan-btn" data-d="3" style="margin-top:34px"><a href="#/about" data-nav class="btn"><span>More about us</span><i></i></a></div>
     </div>
   </div>
 </section>
 
-<section style="padding-top:0">
-  <h2 class="d2 rv" style="margin-bottom:clamp(26px,3vw,40px)">Recent work</h2>
-  <div class="ilist">
-    ${CHAPTERS.map((c,i)=>`
-      <button class="irow short rv" data-nav-to="#/portfolio/photos/${c.id}" data-d="${i%4}">
-        <span class="thumb">${pic(c.cover,'62px',{alt:''})}</span>
-        <span class="t">${c.name}</span>
-        <span class="y">View</span>
-      </button>`).join('')}
+<section class="day" style="padding-top:0">
+  <div class="day-pin">
+    <h2 class="d2" style="margin-bottom:clamp(26px,3vw,40px)">Recent work</h2>
+    <div class="day-sky"><i class="day-sun"></i><ol class="day-hours">${CHAPTERS.map(c=>`<li><a href="#recent-${c.id}" data-day-link="${c.id}">${c.short}</a></li>`).join('')}</ol></div>
+    <div class="day-track">${CHAPTERS.map(c=>`
+      <div class="day-panel" id="recent-${c.id}">
+        <figure class="day-ph arch">${pic(c.cover,'(max-width:900px) 90vw, 46vw')}</figure>
+        <div class="day-tx"><span class="mono">${c.no}</span><h3>${c.name}</h3><p class="mono">${c.alt}</p><p class="lead">${c.desc}</p>
+          <button class="btn" data-nav-to="#/portfolio/photos/${c.id}"><span>View</span><i></i></button>
+        </div>
+      </div>`).join('')}</div>
+    <div style="margin-top:44px"><a href="#/portfolio" data-nav class="btn"><span>The full archive</span><i></i></a></div>
   </div>
-  <div class="rv" style="margin-top:44px"><a href="#/portfolio" data-nav class="btn"><span>The full archive</span><i></i></a></div>
 </section>
 
 <section class="band">
@@ -905,24 +909,30 @@ function sequences(seqs){
           next=seq.querySelector('.sq-next'),frames=[...strip.querySelectorAll('.frame')],
           total=frames.length;
     if(!total)return;
-    let shown=0;
-    const step=()=>frames[1]?frames[1].offsetLeft-frames[0].offsetLeft:frames[0].offsetWidth+16;
+    let shown=0,target=null,settleTimer=0;
+    const positions=()=>{const first=frames[0].offsetLeft,max=Math.max(0,strip.scrollWidth-strip.clientWidth);return frames.map(f=>Math.min(max,f.offsetLeft-first));};
+    const current=()=>{const pos=positions();let best=0;pos.forEach((x,i)=>{if(Math.abs(x-strip.scrollLeft)<Math.abs(pos[best]-strip.scrollLeft)-.5)best=i;});return best;};
     const upd=()=>{
-      if(!strip.isConnected||!step())return;                // the slide was cooled (emptied) while this was queued
-      const max=strip.scrollWidth-strip.clientWidth;
-      const i=Math.max(1,Math.min(total,Math.round(strip.scrollLeft/step())+1));
+      if(!strip.isConnected||!strip.clientWidth)return;
+      const max=strip.scrollWidth-strip.clientWidth,i=current()+1;
       if(i!==shown){
         cnt.textContent=i+' of '+total;
-        if(cap){cap.textContent=frames[i-1].querySelector('.fr-cap span').textContent;
-          if(shown&&cap.animate)cap.animate([{opacity:0},{opacity:1}],{duration:150,easing:'ease-out'})}   // the caption cross-fades, opacity only
+        if(cap)cap.textContent=frames[i-1].querySelector('.fr-cap span').textContent;
         shown=i;
       }
       bar.style.transform='scaleX('+(max>2?strip.scrollLeft/max:1)+')';
-      prev.disabled=strip.scrollLeft<4; next.disabled=strip.scrollLeft>=max-4;
+      prev.disabled=strip.scrollLeft<4;next.disabled=strip.scrollLeft>=max-4;
     };
-    strip.addEventListener('scroll',upd,{passive:true});
-    prev.addEventListener('click',()=>strip.scrollBy({left:-step(),behavior:reduceMotion()?'auto':'smooth'}));
-    next.addEventListener('click',()=>strip.scrollBy({left:step(),behavior:reduceMotion()?'auto':'smooth'}));
+    const move=delta=>{
+      const pos=positions(),base=target===null?current():target;
+      target=Math.max(0,Math.min(total-1,base+delta));
+      strip.scrollTo({left:pos[target],behavior:reduceMotion()?'auto':'smooth'});
+    };
+    strip.addEventListener('scroll',()=>{upd();clearTimeout(settleTimer);settleTimer=setTimeout(()=>target=null,180);},{passive:true});
+    strip.addEventListener('scrollend',()=>{target=null;upd();});
+    strip.addEventListener('pointerdown',()=>target=null,{passive:true});
+    strip.addEventListener('touchstart',()=>target=null,{passive:true});
+    prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));
     strip._upd=upd;                                // run when the slide goes live (warmRow), not now
   });
 }
@@ -1492,8 +1502,7 @@ function homeLogo(placeholder,firstVisit,reveal){
     const to=small.getBoundingClientRect();
     if(reduceMotion()||!Element.prototype.animate||from.width<1||from.height<1){reveal();placeholder.remove();dispose();return;}
     flight=document.createElement('div');flight.setAttribute('aria-hidden','true');flight.className='cb-logo-flight';
-    flight.innerHTML=`<img src="img/pen-loader-1${isLight()?'-dark':''}.png" alt="">`;
-    if(isLight())flight.classList.add('cb-flight-light');
+    flight.innerHTML=`<img src="img/pen-loader-1.png" alt="">`;
     Object.assign(flight.style,{left:from.left+'px',top:from.top+'px',width:from.width+'px',height:from.height+'px'});
     document.body.appendChild(flight);
     // One visible mark: the large drawing becomes the small header mark at landing.
@@ -1595,14 +1604,18 @@ function reel(){
   const video=heroVideo;video.pause();video.muted=true;video.defaultMuted=true;
   el.replaceWith(video);
   preloadHero();
-  let disposed=false,ready=false,landed=false,started=false,manualPlayback=false,userPaused=false;
+  let disposed=false,ready=false,landed=false,started=false,manualPlayback=false,manualStarting=false,userPaused=false,promptTimer=0,promptShown=false;
+  const prompt=hero.querySelector('.hero-unmute-prompt');
   const listeners=[];
   const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
   const updateSound=()=>{sound.innerHTML=HERO_SOUND_ICON(video.muted);sound.setAttribute('aria-pressed',String(!video.muted));sound.setAttribute('aria-label',video.muted?'Unmute background music':'Mute background music');};
   const mute=()=>{video.muted=true;updateSound();};
   const updatePlayback=()=>{playButton.innerHTML=HERO_PLAY_ICON(video.paused);playButton.setAttribute('aria-label',video.error?'Retry film':video.paused?'Play film':'Pause film');playButton.hidden=!manualPlayback;};
   const visible=()=>{const r=hero.getBoundingClientRect();return document.visibilityState==='visible'&&r.bottom>0&&r.top<innerHeight;};
-  const reveal=()=>{if(started)return;started=true;hero.classList.add('is-reel-ready');hero.querySelector('.cb-video-cover')?.remove();sound.hidden=false;};
+  const reveal=()=>{
+    if(!started){started=true;hero.classList.add('is-reel-ready');hero.querySelector('.cb-video-cover')?.remove();sound.hidden=false;}
+    if(!promptShown&&!video.paused&&video.muted){promptShown=true;prompt.hidden=false;promptTimer=setTimeout(()=>prompt.hidden=true,4500);}
+  };
   const play=async()=>{
     if(disposed||!landed||!visible())return;
     try{await video.play();if(disposed||!visible()){video.pause();mute();return;}reveal();updatePlayback();}
@@ -1610,32 +1623,55 @@ function reel(){
   };
   const pause=()=>{video.pause();mute();};
   const sync=()=>{if(!visible())pause();else if(landed&&video.paused&&!userPaused){mute();if(!reduceMotion())play();}};
-  const buffered=()=>{if(video.readyState<3)return false;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<.1&&video.buffered.end(i)>=Math.min(2,video.duration))return true;return false;};
+  // Safari may stop fetching a paused video before two seconds have buffered.
+  // HAVE_FUTURE_DATA is its native signal that playback can begin progressively.
   const logo=heroLogo=homeLogo(placeholder,firstHeroVisit(),()=>{
     if(disposed||!ready)return;landed=true;mute();
-    if(reduceMotion()){manualPlayback=true;reveal();updatePlayback();}else play();
+    if(!video.paused){reveal();updatePlayback();}
+    else if(reduceMotion()){manualPlayback=true;reveal();updatePlayback();}else play();
   });
   const prepare=()=>{
-    if(disposed||ready||video.readyState<3||!buffered())return;
+    if(disposed||ready||manualStarting||video.readyState<(reduceMotion()?1:3))return;
     ready=true;video.pause();video.currentTime=0;logo.playing();
   };
-  listen(video,'progress',prepare);listen(video,'canplaythrough',prepare);listen(video,'loadeddata',prepare);
+  listen(video,'loadedmetadata',prepare);listen(video,'canplay',prepare);listen(video,'progress',prepare);listen(video,'canplaythrough',prepare);listen(video,'loadeddata',prepare);
   listen(sound,'click',()=>{
     if(!landed||!visible())return;
     video.muted=!video.muted;
+    if(!video.muted){prompt.hidden=true;clearTimeout(promptTimer);}
     updateSound();
     play();
   });
-  listen(playButton,'click',()=>{if(!video.paused&&!video.error){userPaused=true;pause();return;}userPaused=false;mute();if(video.error){heroDownload=null;preloadHero().then(play);}else play();});
+  listen(playButton,'click',()=>{
+    if(!ready){
+      if(manualStarting)return;
+      manualPlayback=true;manualStarting=true;mute();
+      // Preserve this user-initiated playback through the logo handoff. Pausing
+      // and asking for autoplay again can lose the gesture grant in Low Power Mode.
+      video.play().then(()=>{
+        if(disposed)return;
+        manualStarting=false;ready=true;logo.playing();
+        if(!visible())pause();
+      }).catch(()=>{
+        if(disposed)return;
+        manualStarting=false;ready=true;logo.playing();
+      });
+      return;
+    }
+    if(!video.paused&&!video.error){userPaused=true;pause();return;}
+    userPaused=false;mute();
+    if(video.error){heroDownload=null;preloadHero().then(play);}else play();
+  });
   listen(video,'play',updatePlayback);listen(video,'pause',updatePlayback);
   listen(video,'playing',()=>{if(landed&&visible())reveal();});
   listen(window,'scroll',sync);listen(window,'resize',sync);
   listen(window,'hashchange',()=>{pause();});
   listen(document,'visibilitychange',sync);listen(window,'pagehide',pause);listen(window,'pageshow',sync);
-  listen(video,'error',()=>{manualPlayback=true;pause();updatePlayback();});
+  listen(video,'error',()=>{manualPlayback=true;ready=true;landed=true;logo.playing();reveal();pause();updatePlayback();});
   // Keep the film covered until a playable opening is buffered; the native player downloads ahead.
+  const loadingHelp=setTimeout(()=>{if(!disposed&&!ready){manualPlayback=true;updatePlayback();}},10000);
   const poll=setInterval(prepare,200);prepare();
-  heroController={dispose(){disposed=true;clearInterval(poll);listeners.forEach(fn=>fn());pause();video.remove();}};
+  heroController={dispose(){disposed=true;clearInterval(poll);clearTimeout(loadingHelp);clearTimeout(promptTimer);listeners.forEach(fn=>fn());pause();video.remove();}};
 }
 
 /* Studio Ninja's form, loaded once per visit. snLoad() runs as soon as the
@@ -1732,7 +1768,7 @@ function render(path){
   observe();photoWindow();
   if(path==='/portfolio'){PS.mount(photoChapter()||(jumpAfter&&jumpAfter.replace(/^ch-/,'')));VF.syncUL()}else PS.unmount();
   jumpAfter=null;
-  letterForm();pricing();reel();tallyQueue();
+  letterForm();pricing();reel();homeScenes();tallyQueue();
   paintLogos();labelFills();
   if(path==='/portfolio')workSync();
   preGone.then(()=>requestAnimationFrame(()=>document.querySelectorAll('.hero .rv,.hero .rv-l,.hero .rv-img,.hero-arch,section:first-of-type .rv,section:first-of-type .rv-l')
@@ -1954,12 +1990,12 @@ function tallyScene(){
   const p=Math.max(0,Math.min(1,-r.top/Math.max(1,r.height-vh)));
   const seg=(a,b)=>Math.max(0,Math.min(1,(p-a)/(b-a)));
   const e=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;               // power2.inOut
-  const z=e(seg(0,.62)),s=from+(1-from)*z;
+  const z=e(seg(0,.62)),s=Math.exp(Math.log(from)*(1-z));
   mosaic.style.transformOrigin=`${(col+.5)/cols*100}% ${(row+.5)/rows*100}%`;
   mosaic.style.transform=`scale(${s.toFixed(4)})`;
-  // Start with the complete photograph, then fill its tile as the surrounding wall appears.
-  const fill=Math.max(mid.clientWidth/photoW,mid.clientHeight/photoH);
-  mosaic.style.setProperty('--mo-photo-scale',(1+(fill-1)*z).toFixed(4));
+  // Keep the central photograph fitted throughout; changing its crop during zoom caused a visible lurch.
+
+  mosaic.style.setProperty('--mo-photo-scale','1');
   const dim=seg(.66,.96);
   mosaic.style.setProperty('--mo-dim',(1-.8*dim).toFixed(3));
   mosaic.style.setProperty('--mo-neighbours',(Math.min(1,z*4)*(1-.8*dim)).toFixed(3));
@@ -2052,3 +2088,56 @@ addEventListener('scroll',()=>{const y=scrollY,h=document.getElementById('hdr');
     requestAnimationFrame(frame);
   })();
 })();
+
+/* Experimental Home chapters and reading highlight, using native sticky scroll. */
+
+function homeScenes(){
+  const plan=document.querySelector('.plan');
+  if(plan&&!plan.dataset.words){
+    plan.dataset.words='1';
+    plan.querySelectorAll('p.lead').forEach(p=>{
+      p.classList.remove('rv');p.innerHTML=p.textContent.split(/(\s+)/).map(w=>/^\s+$/.test(w)?w:`<span class="plan-word">${esc(w)}</span>`).join('');
+    });
+  }
+  const day=document.querySelector('.day');
+  if(day&&!day.dataset.links){
+    day.dataset.links='1';
+    day.querySelectorAll('[data-day-link]').forEach(link=>link.addEventListener('click',e=>{
+      e.preventDefault();
+      const panel=document.getElementById('recent-'+link.dataset.dayLink);if(!panel)return;
+      const desktop=innerWidth>900&&!reduceMotion(),track=day.querySelector('.day-track');
+      const top=desktop
+        ?scrollY+day.getBoundingClientRect().top+Math.min(Math.max(0,track.scrollWidth-track.clientWidth),panel.offsetLeft-track.offsetLeft)
+        :scrollY+panel.getBoundingClientRect().top-document.getElementById('hdr').offsetHeight-day.querySelector('.day-sky').offsetHeight-16;
+      scrollTo({top,behavior:reduceMotion()?'instant':'smooth'});
+    }));
+  }
+  if(day&&!day.dataset.focus){day.dataset.focus='1';day.querySelectorAll('.day-panel').forEach(panel=>panel.addEventListener('focusin',()=>{
+    if(innerWidth<=900||reduceMotion())return;
+    const track=day.querySelector('.day-track'),max=Math.max(0,track.scrollWidth-track.clientWidth);
+    scrollTo({top:scrollY+day.getBoundingClientRect().top+Math.min(max,panel.offsetLeft-track.offsetLeft),behavior:'instant'});
+  }));}
+  homeSceneQueue();
+}
+function homeSceneQueue(){if(!homeSceneFrame)homeSceneFrame=requestAnimationFrame(paintHomeScenes);}
+function paintHomeScenes(){
+  homeSceneFrame=0;
+  const clamp=v=>Math.max(0,Math.min(1,v)),reduce=reduceMotion();
+  const plan=document.querySelector('.plan');
+  if(plan){const r=plan.getBoundingClientRect(),words=[...plan.querySelectorAll('.plan-word')],p=reduce?1:clamp((innerHeight*.8-r.top)/Math.max(1,r.height+innerHeight*.2));words.forEach((w,i)=>w.classList.toggle('read',p*words.length>=i+1));}
+  const day=document.querySelector('.day');if(!day)return;
+  const track=day.querySelector('.day-track'),pin=day.querySelector('.day-pin'),panels=[...day.querySelectorAll('.day-panel')];
+  const desktop=innerWidth>900&&!reduce,max=Math.max(0,track.scrollWidth-track.clientWidth);
+  day.style.height=desktop?`${pin.offsetHeight+max}px`:'';
+  const r=day.getBoundingClientRect();let p=0;
+  if(desktop){p=clamp(-r.top/Math.max(1,max));track.style.transform=`translateX(${-max*p}px)`;}
+  else{track.style.transform='';const first=panels[0].getBoundingClientRect().top,last=panels[panels.length-1].getBoundingClientRect().top;p=clamp((innerHeight*.4-first)/Math.max(1,last-first));}
+  const active=desktop?Math.round(p*(panels.length-1)):Math.max(0,panels.reduce((best,panel,i)=>panel.getBoundingClientRect().top<=innerHeight*.4?i:best,0));day.querySelectorAll('.day-hours li').forEach((el,i)=>{el.classList.toggle('on',i===active);const link=el.querySelector('a');if(i===active)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');});
+  day.querySelector('.day-sun').style.left=`${p*100}%`;
+  const stops=isLight()?['#F6EFE0','#ECE6D9','#DCD3C2','#C9C0AE']:['#1E1A15','#191C26','#141522','#0B0C12'];
+  const segment=p*3,i=Math.min(2,Math.floor(segment)),t=segment-i;
+  const rgb=h=>[1,3,5].map(n=>parseInt(h.slice(n,n+2),16)),a=rgb(stops[i]),b=rgb(stops[i+1]);
+  const ground=`rgb(${a.map((v,n)=>Math.round(v+(b[n]-v)*t)).join(',')})`;day.style.backgroundColor=ground;day.style.setProperty('--day-ground',ground);
+}
+addEventListener('scroll',homeSceneQueue,{passive:true});addEventListener('resize',homeSceneQueue,{passive:true});
+themeSw.addEventListener('click',homeSceneQueue);

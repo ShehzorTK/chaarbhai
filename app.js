@@ -824,7 +824,7 @@ function lightbox(frame){
     el.id='lb';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Photo');
     el.innerHTML=`<button class="lb-x" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></button>
       <button class="lb-prev" aria-label="Previous photo">${ARROW('l')}</button>
-      <figure class="lb-fig"><img alt="" draggable="false"><figcaption><span class="lb-no"></span><span class="lb-cap"></span><span class="lb-t mono"></span></figcaption></figure>
+      <figure class="lb-fig"><img alt="" draggable="false" decoding="async"><figcaption><span class="lb-no"></span><span class="lb-cap"></span><span class="lb-t mono"></span></figcaption></figure>
       <button class="lb-next" aria-label="Next photo">${ARROW('r')}</button>`;
     document.body.appendChild(el);
     const img=el.querySelector('img'),q=c=>el.querySelector(c);
@@ -834,7 +834,7 @@ function lightbox(frame){
       const src=L[i].querySelector('.fr-img img');
       img.classList.add('swap');
       const ss=src.dataset.ss||src.srcset,su=src.dataset.u||src.src;   // Work frames keep the full set in data-*, see photoWindow
-      const nxt=new Image(); nxt.sizes='94vw'; nxt.srcset=ss;
+      const nxt=new Image();nxt.decoding="async"; nxt.sizes='94vw'; nxt.srcset=ss;
       const put=()=>{img.sizes='94vw';img.srcset=ss;img.src=su;img.alt=src.alt;img.classList.remove('swap')};
       nxt.onload=put; nxt.onerror=put; nxt.src=su;
       q('.lb-no').textContent=String(i+1).padStart(2,'0')+' / '+String(L.length).padStart(2,'0');

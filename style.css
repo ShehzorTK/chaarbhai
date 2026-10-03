@@ -861,7 +861,8 @@ footer{padding:clamp(48px,6vw,84px) var(--pad) 26px;border-top:1px solid var(--l
    The stage snaps one chapter opener or couple at a time like the Films feed; a slide is 84% of the stage, so the next
    one peeks in below it. Photographs stay bare: no stroke, frame or shadow. Depth comes from space. */
 html.on-work{scroll-snap-type:none}   /* the menu above the stage scrolls natively, no snapping */
-html.snap-y{scroll-snap-type:y mandatory}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
+html.snap-y,html.snap-g{scroll-snap-type:y mandatory}
+.gs-stop{position:absolute;left:0;width:1px;height:1px;opacity:0;pointer-events:none;scroll-snap-align:start;scroll-snap-stop:always}   /* hard one-slide snapping only while the stage fills the screen (set in photo-stage.js) */
 html.on-work header::before{opacity:1;transition:opacity .3s,background-color .8s var(--quint)}   /* a solid bar on Work: the prologue never ghosts through the header */
 /* over the stage (dark mode, Photographs) the bar takes the same tint as the ground, so the nav is part of the room */
 :root:not([data-theme="light"]) body.vf-in:not(.vf-on) header::before{background:var(--tint,var(--hdr));-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -1278,11 +1279,17 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 .ab-l{transition:color 180ms linear}
 .ab-paras p.lead{max-width:48ch}
 @media(min-width:901px) and (prefers-reduced-motion:no-preference){
-  .ab-head{position:sticky;top:calc(var(--hh,88px) + 40px)}
   .ab-l{display:block;color:color-mix(in srgb,var(--paper) 30%,transparent)}
   .ab-l.lit{color:var(--paper)}
-  .ab-paras p.lead{min-height:48svh}
-  .ab-paras p.lead:last-child{min-height:0}
+}
+/* About: three guided steps. A 300svh track with a pinned 100svh stage; paragraphs swap in place (JS sets .on and .lit). */
+@media(min-width:901px) and (prefers-reduced-motion:no-preference){
+  .ab-story{position:relative;height:300vh;height:300svh;padding-block:0}
+  .ab-grid{position:sticky;top:0;height:100vh;height:100svh;align-items:center;padding-top:var(--hh,88px)}
+  .ab-head{position:static}
+  .ab-paras{display:grid}
+  .ab-paras p.lead{grid-area:1/1;min-height:0;opacity:0;transform:translateY(8px);transition:opacity .3s var(--ease),transform .3s var(--ease);pointer-events:none}
+  .ab-paras p.lead.on{opacity:1;transform:none;pointer-events:auto}
 }
 @media(max-width:900px){.ab-grid{grid-template-columns:1fr}.ab-paras p.lead+p.lead{margin-top:20px}}
 
@@ -1299,3 +1306,23 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
   .day-hours a{min-height:44px;white-space:nowrap}
   .day-hours::-webkit-scrollbar{display:none}
 }
+
+/* Home Recent work on phones: each chapter is a snap stop under the sticky strip */
+@media(max-width:900px) and (prefers-reduced-motion:no-preference){
+  .day-panel,.day-end{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--gs-top,140px)}
+}
+/* About: Google listing card beside the Toronto text */
+.gta{display:grid;grid-template-columns:1fr minmax(280px,380px);gap:clamp(24px,5vw,80px);align-items:center}
+.gcard{display:flex;flex-direction:column;gap:18px;padding:22px;border:1px solid var(--line-2);border-radius:12px;background:color-mix(in srgb,var(--paper) 4%,transparent)}
+.gcard-top{display:flex;align-items:center;gap:14px}
+.gcard-name{display:block;font-family:var(--f-display);font-weight:400;font-size:var(--t-headline-s);line-height:1.1}
+.gcard-cat{display:block;color:var(--dim);font-size:.9rem;margin-top:2px}
+.gcard-rate{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.gcard-rate b{font-weight:500;font-size:1.25rem}
+.gcard{--pb-star-off:var(--line-2)}
+.gcard-rate span:last-child{color:var(--dim);font-size:.9rem}
+.gcard-list{list-style:none;display:grid;gap:12px;font-size:.95rem}
+.gcard-list span{display:block;color:var(--dim);font-size:var(--t-label);letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px}
+.gcard-list a{color:inherit}
+.gcard .btn{align-self:flex-start}
+@media(max-width:900px){.gta{grid-template-columns:1fr}}

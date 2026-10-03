@@ -203,7 +203,7 @@ P['/']=()=>`
           <button class="btn" data-nav-to="#/portfolio/photos/${c.id}"><span>View</span><i></i></button>
         </div>
       </div>`).join('')}</div>
-    <div style="margin-top:44px"><a href="#/portfolio" data-nav class="btn"><span>The full archive</span><i></i></a></div>
+    <div class="day-end" style="margin-top:44px"><a href="#/portfolio" data-nav class="btn"><span>The full archive</span><i></i></a></div>
   </div>
 </section>
 
@@ -257,7 +257,7 @@ P['/portfolio']=()=>`
 
 P['/about']=()=>`
 <section class="hero" style="min-height:70svh;justify-content:flex-end">
-  <h1 class="d1 rv" data-d="1">Chaar Bhai means<br>four brothers</h1>
+  <h1 class="d1 rv" data-d="1">Chaar Bhai is Urdu<br>for four brothers</h1>
   <div class="hero-foot mono"><span>Since 2013</span><span>Photo and film</span><span>We travel</span></div>
 </section>
 
@@ -265,9 +265,9 @@ P['/about']=()=>`
   <div class="ab-grid">
     <h2 class="d2 ab-head" aria-label="When your brothers are at the wedding, you don’t worry. They’ve got it covered.">${['When your brothers are at the wedding,','you don’t worry.','They’ve got it covered.'].map(l=>`<span class="ab-l" aria-hidden="true">${l}</span>`).join(' ')}</h2>
     <div class="ab-paras">
-      <p class="lead rv" data-d="1">Chaar Bhai is Urdu for four brothers. We started in 2013 as four friends, and life has since taken the four of us to different parts of the world. The name stayed, because of what it came to mean.</p>
-      <p class="lead rv" data-d="1">What we’ve learnt, and what our couples tell us they expect, is that feeling: the comfort of knowing Chaar Bhai have it covered, so the family can get on with the day.</p>
-      <p class="lead rv" data-d="1">It’s why our clients so often span three generations of one family. Somewhere along the way we stop being the people with the cameras and become family.</p>
+      <p class="lead">We started in 2013 as four friends, and life has since taken the four of us to different parts of the world. The name stayed, because of what it came to mean.</p>
+      <p class="lead">What we’ve learnt, and what our couples tell us they expect, is that feeling: the comfort of knowing Chaar Bhai have it covered, so the family can get on with the day.</p>
+      <p class="lead">It’s why our clients so often span three generations of one family. Somewhere along the way we stop being the people with the cameras and become family.</p>
     </div>
   </div>
 </section>
@@ -297,8 +297,22 @@ P['/about']=()=>`
 </section>
 
 <section>
-  <h2 class="d2 rv" data-d="1" style="max-width:18ch">Based in the Greater<br>Toronto Area, and we travel</h2>
-  <p class="lead rv" data-d="2" style="margin-top:24px">The Greater Toronto Area is home, but a wedding somewhere else is not a problem. We have shot in Pakistan, the UAE, Thailand and the United States. Tell us where yours is and we’ll tell you whether we can be there.</p>
+  <div class="gta">
+    <div>
+      <h2 class="d2 rv" data-d="1" style="max-width:18ch">Based in the Greater<br>Toronto Area, and we travel</h2>
+      <p class="lead rv" data-d="2" style="margin-top:24px">The Greater Toronto Area is home, but a wedding somewhere else is not a problem. We have shot in Pakistan, the UAE, Thailand and the United States. Tell us where yours is and we’ll tell you whether we can be there.</p>
+    </div>
+    <aside class="gcard rv" data-d="2" aria-label="Chaar Bhai on Google">
+      <div class="gcard-top">${G_LOGO}<div><b class="gcard-name">Chaar Bhai</b><span class="gcard-cat">Wedding photographer</span></div></div>
+      <div class="gcard-rate"><b>${PROOF.google.rating.toFixed(1)}</b>${STARS(PROOF.google.rating)}<span>${PROOF.google.count} Google reviews</span></div>
+      <ul class="gcard-list">
+        <li><span>Address</span>1 Elm Dr W, Mississauga, ON L5B 4M2, Canada</li>
+        <li><span>Phone</span><a href="tel:+16475102444">+1 647-510-2444</a></li>
+        <li><span>Website</span><a href="https://chaarbhai.com" rel="noopener">chaarbhai.com</a></li>
+      </ul>
+      <a class="btn" href="${PROOF.google.url}" target="_blank" rel="noopener"><span>View on Google</span><i></i></a>
+    </aside>
+  </div>
 </section>
 
 <section class="band hire" aria-labelledby="hire-h">
@@ -2101,18 +2115,29 @@ function homeScenes(){
       const panel=document.getElementById('recent-'+link.dataset.dayLink);if(!panel)return;
       const desktop=innerWidth>900&&!reduceMotion(),track=day.querySelector('.day-track');
       const top=desktop
-        ?scrollY+day.getBoundingClientRect().top+Math.min(Math.max(0,track.scrollWidth-track.clientWidth),panel.offsetLeft-track.offsetLeft)
+        ?scrollY+day.getBoundingClientRect().top+(panel.offsetLeft-track.offsetLeft)
         :scrollY+panel.getBoundingClientRect().top-document.getElementById('hdr').offsetHeight-day.querySelector('.day-sky').offsetHeight-16;
       scrollTo({top,behavior:reduceMotion()?'instant':'smooth'});
     }));
   }
   if(day&&!day.dataset.focus){day.dataset.focus='1';day.querySelectorAll('.day-panel').forEach(panel=>panel.addEventListener('focusin',()=>{
     if(innerWidth<=900||reduceMotion())return;
-    const track=day.querySelector('.day-track'),max=Math.max(0,track.scrollWidth-track.clientWidth);
-    scrollTo({top:scrollY+day.getBoundingClientRect().top+Math.min(max,panel.offsetLeft-track.offsetLeft),behavior:'instant'});
+    const track=day.querySelector('.day-track');
+    scrollTo({top:scrollY+day.getBoundingClientRect().top+(panel.offsetLeft-track.offsetLeft),behavior:'instant'});
   }));}
   homeSceneQueue();
 }
+/* Guided stops: invisible snap markers inside a pinned section (offsets in px from its top), and html.snap-g (mandatory y snapping)
+   switched on only while that section's stage fills the screen (scroll within [from,to] px of its top). One flick = one stop. */
+const GUIDE={};
+function guidedStops(el,key,offsets,from,to){
+  let m=[...el.querySelectorAll(':scope>.gs-stop')];
+  if(m.length!==offsets.length){m.forEach(n=>n.remove());m=offsets.map(()=>{const n=document.createElement('i');n.className='gs-stop';n.setAttribute('aria-hidden','true');el.appendChild(n);return n;});}
+  m.forEach((n,i)=>n.style.top=`${Math.round(offsets[i])}px`);
+  const y=-el.getBoundingClientRect().top;GUIDE[key]=y>=from-2&&y<=to+2;guideApply();
+}
+function guideOff(key){if(GUIDE[key]){GUIDE[key]=false;guideApply();}}
+function guideApply(){document.documentElement.classList.toggle('snap-g',Object.values(GUIDE).some(Boolean));}
 function homeSceneQueue(){if(!homeSceneFrame)homeSceneFrame=requestAnimationFrame(paintHomeScenes);}
 function paintHomeScenes(){
   homeSceneFrame=0;
@@ -2120,11 +2145,30 @@ function paintHomeScenes(){
   const plan=document.querySelector('.plan');
   if(plan){const r=plan.getBoundingClientRect(),words=[...plan.querySelectorAll('.plan-word')],p=reduce?1:clamp((innerHeight*.8-r.top)/Math.max(1,r.height+innerHeight*.2));words.forEach((w,i)=>w.classList.toggle('read',p*words.length>=i+1));}
   const ab=document.querySelector('.ab-story');
-  if(ab){const ps=[...ab.querySelectorAll('.ab-paras p')],ls=[...ab.querySelectorAll('.ab-l')];ps.forEach((q,i)=>ls[i]&&ls[i].classList.toggle('lit',reduce||q.getBoundingClientRect().top<=innerHeight*.55));}
-  const day=document.querySelector('.day');if(!day)return;
+  if(ab){
+    const ps=[...ab.querySelectorAll('.ab-paras p')],ls=[...ab.querySelectorAll('.ab-l')];
+    if(innerWidth>900&&!reduce){
+      const u=ab.offsetHeight/3,step=Math.max(0,Math.min(2,Math.round(-ab.getBoundingClientRect().top/u)));
+      ps.forEach((q,i)=>q.classList.toggle('on',i===step));ls.forEach((l,i)=>l.classList.toggle('lit',i<=step));
+      guidedStops(ab,'about',[0,u,2*u,2.5*u],0,2*u);
+    }else{
+      guideOff('about');ps.forEach(q=>q.classList.remove('on'));
+      ps.forEach((q,i)=>ls[i]&&ls[i].classList.toggle('lit',reduce||q.getBoundingClientRect().top<=innerHeight*.55));
+    }
+  }else guideOff('about');
+  const day=document.querySelector('.day');if(!day){guideOff('home');return;}
   const track=day.querySelector('.day-track'),pin=day.querySelector('.day-pin'),panels=[...day.querySelectorAll('.day-panel')];
-  const desktop=innerWidth>900&&!reduce,max=Math.max(0,track.scrollWidth-track.clientWidth);
+  const desktop=innerWidth>900&&!reduce,step=panels.length>1?panels[1].offsetLeft-panels[0].offsetLeft:0,max=step*(panels.length-1);
   day.style.height=desktop?`${pin.offsetHeight+max}px`:'';
+  if(desktop)guidedStops(day,'home',[...panels.map((_,i)=>i*step),max+pin.offsetHeight*.6],0,max);
+  else if(!reduce){
+    /* phones: panels stack, each is its own stop under the sticky strip; the button row after the last is the exit stop */
+    const off=document.getElementById('hdr').offsetHeight+day.querySelector('.day-sky').offsetHeight;
+    day.style.setProperty('--gs-top',`${off}px`);
+    day.querySelectorAll(':scope>.gs-stop').forEach(n=>n.remove());
+    const end=day.querySelector('.day-end').getBoundingClientRect().top;
+    GUIDE.home=panels[0].getBoundingClientRect().top<innerHeight*.6&&end>off+4;guideApply();
+  }else guideOff('home');
   const r=day.getBoundingClientRect();let p=0;
   if(desktop){p=clamp(-r.top/Math.max(1,max));track.style.transform=`translateX(${-max*p}px)`;}
   else{track.style.transform='';const first=panels[0].getBoundingClientRect().top,last=panels[panels.length-1].getBoundingClientRect().top;p=clamp((innerHeight*.4-first)/Math.max(1,last-first));}

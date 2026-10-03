@@ -1225,9 +1225,11 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 :root[data-theme="light"] .vhero .cb-hero-placeholder>img{content:url(img/logo-dark.png)}   /* light mode: the dark mark, maple leaf still red */
 .cb-logo-flight img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 :root[data-theme="light"]:not(.on-contact) footer .credit-logo{filter:brightness(0);opacity:.6}   /* the white credit mark turns dark on the paper footer */
-/* Native hero: one fully buffered 28-second file, no iframe or restart timer. */
+/* Native hero: one fully buffered film, no iframe or restart timer. */
 .vhero-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .hero-sound,.hero-play{position:absolute;z-index:4;right:var(--pad);top:calc(var(--hh,88px) + 24px);min-height:44px;padding:10px 16px;border:1px solid var(--paper);border-radius:2px;background:var(--ink);color:var(--paper);cursor:pointer;font-size:11px;letter-spacing:.08em}
+.hero-sound,.hero-play{display:grid;place-items:center;width:44px;height:44px;padding:10px}
+.hero-sound svg,.hero-play svg{display:block;width:22px;height:22px}
 .hero-play{top:calc(var(--hh,88px) + 78px)}
 .hero-sound[hidden],.hero-play[hidden]{display:none}
 .hero-sound:focus-visible,.hero-play:focus-visible{outline:2px solid var(--gold);outline-offset:4px}

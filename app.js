@@ -1,10 +1,10 @@
 /* Preload the same native player during the initial site loader, before Home mounts. */
-const HERO_SRC=matchMedia('(max-width:700px)').matches?'media/hero-v40-51-720.mp4':'media/hero-v40-51-1080.mp4';
+const HERO_SRC=matchMedia('(max-width:700px)').matches?'media/hero-v40-52-720.mp4':'media/hero-v40-52-1080.mp4';
 const heroVideo=document.createElement('video');
 heroVideo.id='hero-video';heroVideo.className='vhero-video';
 heroVideo.muted=true;heroVideo.defaultMuted=true;heroVideo.loop=true;heroVideo.playsInline=true;
 heroVideo.setAttribute('muted','');heroVideo.setAttribute('playsinline','');
-heroVideo.preload='auto';heroVideo.poster='media/hero-v40-51-poster.webp';
+heroVideo.preload='auto';heroVideo.poster='media/hero-v40-52-poster.webp';
 heroVideo.setAttribute('aria-hidden','true');
 let heroController=null,heroDownload=null,heroDownloaded=false;
 function preloadHero(){
@@ -152,6 +152,10 @@ const proof=(cls='')=>`<div class="proof ${cls}">
 
 const ARROW=d=>`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d==='l'?'M13 8H3M7 4 3 8l4 4':'M3 8h10M9 4l4 4-4 4'}" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+const HERO_SOUND_ICON=muted=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z${muted?'M16 9.5l5 5M21 9.5l-5 5':'M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11'}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const HERO_PLAY_ICON=paused=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${paused?'M8 5.5v13l11-6.5z':'M7 5h3.6v14H7zM13.4 5H17v14h-3.6z'}" fill="currentColor"/></svg>`;
+
 /* ================= PAGES ================= */
 const P={};
 
@@ -162,8 +166,8 @@ P['/']=()=>`
     <div class="cb-hero-placeholder" aria-hidden="true"><img src="img/pen-loader-1.png" alt="" width="2048" height="981"></div>
     <div class="cb-video-cover" aria-hidden="true"></div>
     <div class="vhero-player"><div id="reel"></div></div>
-    <button class="hero-sound mono" type="button" aria-label="Unmute background music" aria-pressed="false" hidden>Sound off</button>
-    <button class="hero-play mono" type="button" hidden>Play film</button>
+    <button class="hero-sound mono" type="button" aria-label="Unmute background music" aria-pressed="false" hidden>${HERO_SOUND_ICON(true)}</button>
+    <button class="hero-play mono" type="button" aria-label="Play film" hidden>${HERO_PLAY_ICON(true)}</button>
   </div>
   <div class="vhero-in">
     <h1>
@@ -1599,23 +1603,25 @@ function reel(){
   const video=heroVideo;video.pause();video.muted=true;video.defaultMuted=true;
   el.replaceWith(video);
   preloadHero();
-  let disposed=false,ready=false,landed=false,started=false;
+  let disposed=false,ready=false,landed=false,started=false,manualPlayback=false,userPaused=false;
   const listeners=[];
   const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
-  const mute=()=>{video.muted=true;sound.textContent='Sound off';sound.setAttribute('aria-pressed','false');sound.setAttribute('aria-label','Unmute background music');};
-  const visible=()=>{const r=hero.getBoundingClientRect();return document.visibilityState==='visible'&&r.top>=-80&&r.bottom>innerHeight*.5;};
+  const updateSound=()=>{sound.innerHTML=HERO_SOUND_ICON(video.muted);sound.setAttribute('aria-pressed',String(!video.muted));sound.setAttribute('aria-label',video.muted?'Unmute background music':'Mute background music');};
+  const mute=()=>{video.muted=true;updateSound();};
+  const updatePlayback=()=>{playButton.innerHTML=HERO_PLAY_ICON(video.paused);playButton.setAttribute('aria-label',video.error?'Retry film':video.paused?'Play film':'Pause film');playButton.hidden=!manualPlayback;};
+  const visible=()=>{const r=hero.getBoundingClientRect();return document.visibilityState==='visible'&&r.bottom>0&&r.top<innerHeight;};
   const reveal=()=>{if(started)return;started=true;hero.classList.add('is-reel-ready');hero.querySelector('.cb-video-cover')?.remove();sound.hidden=false;};
   const play=async()=>{
     if(disposed||!landed||!visible())return;
-    try{await video.play();if(disposed||!visible()){video.pause();mute();return;}reveal();playButton.hidden=true;}
-    catch(e){if(!disposed){reveal();playButton.hidden=false;}}
+    try{await video.play();if(disposed||!visible()){video.pause();mute();return;}reveal();updatePlayback();}
+    catch(e){if(!disposed){manualPlayback=true;reveal();updatePlayback();}}
   };
   const pause=()=>{video.pause();mute();};
-  const sync=()=>{if(!visible())pause();else if(landed&&video.paused){mute();if(!reduceMotion())play();}};
+  const sync=()=>{if(!visible())pause();else if(landed&&video.paused&&!userPaused){mute();if(!reduceMotion())play();}};
   const buffered=()=>{if(heroDownloaded)return true;if(video.readyState<3)return false;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<.1&&video.buffered.end(i)>=video.duration-.1)return true;return false;};
   const logo=heroLogo=homeLogo(placeholder,firstHeroVisit(),()=>{
     if(disposed||!ready)return;landed=true;mute();
-    if(reduceMotion()){reveal();playButton.hidden=false;}else play();
+    if(reduceMotion()){manualPlayback=true;reveal();updatePlayback();}else play();
   });
   const prepare=()=>{
     if(disposed||ready||video.readyState<3||!buffered())return;
@@ -1625,16 +1631,16 @@ function reel(){
   listen(sound,'click',()=>{
     if(!landed||!visible())return;
     video.muted=!video.muted;
-    sound.textContent=video.muted?'Sound off':'Sound on';
-    sound.setAttribute('aria-pressed',String(!video.muted));
-    sound.setAttribute('aria-label',video.muted?'Unmute background music':'Mute background music');
+    updateSound();
     play();
   });
-  listen(playButton,'click',()=>{mute();if(video.error){heroDownload=null;heroDownloaded=false;preloadHero();}else play();});
+  listen(playButton,'click',()=>{if(!video.paused&&!video.error){userPaused=true;pause();return;}userPaused=false;mute();if(video.error){heroDownload=null;heroDownloaded=false;preloadHero();}else play();});
+  listen(video,'play',updatePlayback);listen(video,'pause',updatePlayback);
+  listen(video,'playing',()=>{if(landed&&visible())reveal();});
   listen(window,'scroll',sync);listen(window,'resize',sync);
   listen(window,'hashchange',()=>{pause();});
   listen(document,'visibilitychange',sync);listen(window,'pagehide',pause);listen(window,'pageshow',sync);
-  listen(video,'error',()=>{pause();playButton.hidden=false;playButton.textContent='Retry film';});
+  listen(video,'error',()=>{manualPlayback=true;pause();updatePlayback();});
   // Keep downloading the complete short loop before uncovering it: no network fetch at its seam.
   const poll=setInterval(prepare,200);prepare();
   heroController={dispose(){disposed=true;clearInterval(poll);listeners.forEach(fn=>fn());pause();video.remove();}};

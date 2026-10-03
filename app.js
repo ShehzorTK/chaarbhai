@@ -112,7 +112,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 
 /* Ratings shown on the site, with links to the full lists. The figures are
    typed in by hand: update them when they change.
-   google.url opens the Chaar Bhai Canada listing (Mississauga) by its
+   google.url opens the Chaar Bhai Canada listing by its
    permanent Maps id. Not the older Pakistan listing. */
 const PROOF={
   google:{rating:4.8,count:37,url:'https://www.google.com/maps?cid=901197728530734372'},
@@ -306,7 +306,6 @@ P['/about']=()=>`
       <div class="gcard-top">${G_LOGO}<div><b class="gcard-name">Chaar Bhai</b><span class="gcard-cat">Wedding photographer</span></div></div>
       <div class="gcard-rate"><b>${PROOF.google.rating.toFixed(1)}</b>${STARS(PROOF.google.rating)}<span>${PROOF.google.count} Google reviews</span></div>
       <ul class="gcard-list">
-        <li><span>Address</span>1 Elm Dr W, Mississauga, ON L5B 4M2, Canada</li>
         <li><span>Phone</span><a href="tel:+16475102444">+1 647-510-2444</a></li>
         <li><span>Website</span><a href="https://chaarbhai.com" rel="noopener">chaarbhai.com</a></li>
       </ul>

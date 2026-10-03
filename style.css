@@ -1311,7 +1311,19 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 @media(max-width:900px) and (prefers-reduced-motion:no-preference){
   .day-panel,.day-end{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--gs-top,140px)}
 }
-/* About: Google rating badge beside the Toronto text */
-.gta{display:grid;grid-template-columns:1fr auto;gap:clamp(24px,5vw,80px);align-items:center}
-.gta .proof{margin-top:0}
-@media(max-width:900px){.gta{grid-template-columns:1fr}.gta .proof{margin-top:8px}}
+/* About: Google rating as a square tile beside the Toronto text */
+.gta{display:grid;grid-template-columns:1fr minmax(300px,380px);gap:clamp(24px,5vw,80px);align-items:center}
+.gsq{aspect-ratio:1;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(20px,2.4vw,28px);background:var(--ink-2);border:1px solid var(--gline);border-radius:12px;color:var(--gold);text-decoration:none;-webkit-tap-highlight-color:transparent;transition:border-color .2s ease,transform .16s ease-out}
+.gsq-top{display:flex;align-items:center;gap:12px;font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.gsq-top .pb-logo{width:26px;height:26px}
+.gsq-mid{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.gsq-mid b{font-family:var(--f-display);font-weight:400;font-size:clamp(84px,9vw,120px);line-height:.9;letter-spacing:-.03em;color:var(--paper)}
+.gsq-mid .stars{--pb-star-off:var(--line-2)}
+.gsq-mid .stars svg{width:20px;height:20px}
+.gsq-mid>span:last-child{color:var(--dim);font-size:.95rem}
+.gsq-foot{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line-2);font-size:var(--t-label);font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+.gsq-foot svg{width:18px;height:18px;transition:transform .2s var(--ease)}
+.gsq:active{transform:scale(.98)}
+.gsq:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+@media(hover:hover) and (pointer:fine){.gsq:hover{border-color:var(--gold)}.gsq:hover .gsq-foot svg{transform:translate(3px,-3px)}}
+@media(max-width:900px){.gta{grid-template-columns:1fr}.gsq{margin-top:8px}}

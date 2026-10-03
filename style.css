@@ -47,7 +47,7 @@
   --t-lead:clamp(16px,1.15vw,18px);
   --t-body:16px;
   --t-small:14px;
-  --t-label:11px;   /* photographs are plain rectangles */
+  --t-label:12px;   /* photographs are plain rectangles */
 }
 /* Light: the same family on paper. Navy ink for text, the gold darkened
    until it reads as type on cream, the maple unchanged. */
@@ -72,18 +72,19 @@
   color-scheme:light;
 }
 /* Contact stays night navy in either theme (app.js sets html.on-contact): the form is one colour, so the page ignores the theme switch */
+/* One always-night token set, shared by Contact (either theme), the header, footer and loading screens */
+:root[data-theme="light"].on-contact,header,footer,#pre,#wkpre{
+  --ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
+  --soft:rgba(239,234,223,.54);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
+  --line-2:rgba(239,234,223,.22);--gline:rgba(206,192,163,.34)}
+/* Contact stays night navy in either theme (app.js sets html.on-contact): the form is one colour, so the page ignores the theme switch */
 :root[data-theme="light"].on-contact{
-  --ink:#12141C;--ink-2:#191C26;--ink-3:#232735;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
-  --gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--soft:rgba(239,234,223,.54);--line:rgba(239,234,223,.12);--gline:rgba(206,192,163,.34);
-  --line-2:rgba(239,234,223,.22);--gold-wash:rgba(206,192,163,.1);--hdr:rgba(18,20,28,.86);--bar:rgba(18,20,28,.92);--bar-solid:rgba(18,20,28,.98);
+  --ink-3:#232735;--gold-wash:rgba(206,192,163,.1);--hdr:rgba(18,20,28,.86);--bar:rgba(18,20,28,.92);--bar-solid:rgba(18,20,28,.98);
   color-scheme:dark}
-/* the home photograph keeps its night palette in either theme */
 /* The frame of the site stays night-navy in either theme: the header, the
    footer and the loading screen, so the beige mark always sits on dark.
    The home photograph keeps its night palette too. */
-header,footer,#pre,#wkpre{--ink:#12141C;--ink-2:#191C26;--paper:#EFEADF;--dim:rgba(239,234,223,.58);--faint:rgba(239,234,223,.28);
-  --soft:rgba(239,234,223,.54);--gold:#CEC0A3;--gold-2:#8E8268;--gold-hi:#E6D9B8;--line:rgba(239,234,223,.12);
-  --line-2:rgba(239,234,223,.22);--gline:rgba(206,192,163,.34);--hdr:rgba(18,20,28,.94);color:var(--paper)}
+header,footer,#pre,#wkpre{--hdr:rgba(18,20,28,.94);color:var(--paper)}
 footer{background:var(--ink)}
 /* light mode: the footer is paper with dark type and the dark mark (Contact keeps it night navy) */
 :root[data-theme="light"]:not(.on-contact) footer{--ink:#F4F0E7;--paper:#1D1F2C;--dim:rgba(29,31,44,.74);--faint:rgba(29,31,44,.36);--soft:rgba(29,31,44,.68);--gold:#6E5C3B;--gold-2:#A8966E;--gold-hi:#57492D;--line:rgba(29,31,44,.13);--line-2:rgba(29,31,44,.22);--gline:rgba(110,92,59,.42)}
@@ -1224,7 +1225,7 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 :root[data-theme="light"]:not(.on-contact) footer .credit-logo{filter:brightness(0);opacity:.6}   /* the white credit mark turns dark on the paper footer */
 /* Native hero: one fully buffered film, no iframe or restart timer. */
 .vhero-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
-.hero-sound,.hero-play{position:absolute;z-index:4;right:var(--pad);top:calc(var(--hh,88px) + 24px);min-height:44px;padding:10px 16px;border:1px solid var(--paper);border-radius:2px;background:var(--ink);color:var(--paper);cursor:pointer;font-size:11px;letter-spacing:.08em}
+.hero-sound,.hero-play{position:absolute;z-index:4;right:var(--pad);top:calc(var(--hh,88px) + 24px);min-height:44px;padding:10px 16px;border:1px solid var(--paper);border-radius:2px;background:var(--ink);color:var(--paper);cursor:pointer;font-size:12px;letter-spacing:.08em}
 .hero-sound,.hero-play{display:grid;place-items:center;width:44px;height:44px;padding:10px}
 .hero-sound svg,.hero-play svg{display:block;width:22px;height:22px}
 .hero-play{top:calc(var(--hh,88px) + 78px)}

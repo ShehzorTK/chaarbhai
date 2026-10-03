@@ -1245,7 +1245,7 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
 .plan{min-height:80svh;display:flex;align-items:center}
 .plan .band-in{width:100%}
 .plan p.lead{font-family:var(--f-serif);font-size:clamp(22px,2.05vw,31px);line-height:1.38;letter-spacing:-.005em;color:var(--paper);max-width:30ch}
-.plan-word{color:var(--dim);transition:color 180ms linear}
+.plan-word{color:color-mix(in srgb,var(--paper) 30%,transparent);transition:color 180ms linear}
 .plan-word.read{color:var(--paper)}
 .day{position:relative;overflow:clip}
 .day-pin{padding-top:calc(var(--hh,88px) + 20px);padding-bottom:30px}
@@ -1271,6 +1271,12 @@ header .brand img.cb-brand-in-flight{visibility:hidden}
   .day-hours{position:static}.day-hours li:not(.on){display:none}.day-sun{top:auto;bottom:-5px}
 }
 @media(prefers-reduced-motion:reduce){.plan-word{transition:none}}
+/* About: one big statement, a line at a time, scrubbed to scroll (see paintHomeScenes) */
+.st-reveal{min-height:80svh;display:flex;align-items:center}
+.st-p{font-size:clamp(34px,6.4vw,92px);line-height:1.12;letter-spacing:-.02em;max-width:16em}
+.st-line{display:block;overflow:hidden;padding-bottom:.08em}
+.st-line>span{display:block;opacity:calc(.15 + .85*var(--lp,1));transform:translateY(calc((1 - var(--lp,1))*105%))}
+@media(max-width:900px){.st-reveal{min-height:0}}
 
 /* Chapter indicators are local navigation, including on a phone. */
 .day-hours a{display:flex;align-items:center;min-height:44px;color:inherit;text-decoration:none;touch-action:manipulation}

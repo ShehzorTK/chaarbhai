@@ -27,8 +27,8 @@ const catIndex=c=>(window.WORK_CATS||[]).indexOf(c.short);
 function prologueHTML(){
   return `<section class="pro" id="pro" aria-labelledby="pro-h">
   <div class="pro-in">
-    <h1 class="pro-h" id="pro-h">Come in. Here is the week.</h1>
-    <p class="pro-p">These are real weddings, shown from the first night to the farewell. We start with portraits, then follow the week in the order it happened. Swipe a couple’s photographs sideways, scroll for the next story.</p>
+    <h1 class="pro-h" id="pro-h">Come meet the couples.</h1>
+    <p class="pro-p">Every couple here is a real client. We start with portraits, then follow the wedding week as it happened, from the first night to the farewell. Swipe sideways for more of a couple. Scroll for the next one.</p>
     <ol class="pro-list">${CHAPTERS.map(c=>`
       <li><button class="pro-row" type="button" data-ch="${c.id}">
         <span class="pro-n">${esc(c.name)}</span>

@@ -183,8 +183,8 @@ function slideHTML(d,i){
 function prologueHTML(data,catsOn){
   const ch=typeof CHAPTERS!=='undefined'?CHAPTERS:[],cats=window.WORK_CATS||[];
   return `<section class="pro" id="vf-pro" aria-labelledby="vf-pro-h"><div class="pro-in">
-    <h1 class="pro-h" id="vf-pro-h">Stay a while. Here are the films.</h1>
-    <p class="pro-p">Every film here is a real wedding, shown the way the day unfolded. Start with a highlight, then watch the full film if you want the whole day. Scroll for the next film.</p>
+    <h1 class="pro-h" id="vf-pro-h">Press play on a wedding.</h1>
+    <p class="pro-p">Every film here is one real wedding. Watch the highlight first, then the full film if you want the whole day. Scroll for the next film.</p>
     <ol class="pro-list">${catsOn.map(([k,first])=>{
       const c=ch.find(x=>x.short===cats[k]),n=data.filter(d=>d.cat===k).length;
       return `<li><button class="pro-row" type="button" data-first="${first}">
